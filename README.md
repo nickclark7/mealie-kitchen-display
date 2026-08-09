@@ -38,6 +38,10 @@ You'll need:
 
 Once added, a **Recipes** entry appears in the sidebar automatically — no further configuration needed. A **Mealie Recipe Launcher** card is also available to add to any dashboard.
 
+### Shopping lists and Home Assistant's native `todo` entities
+
+This add-on writes shopping list items directly to Mealie — that part needs nothing else. If you'd also like those lists to show up as Home Assistant `todo.*` entities (for voice assistant, other shopping-list cards, etc.), add Home Assistant's separate **core Mealie integration** (Settings → Devices & Services → Add Integration → search "Mealie") — it mirrors each Mealie shopping list to a `todo` entity, kept in sync in both directions. That's a different, official integration that ships with Home Assistant; this add-on doesn't duplicate that syncing itself.
+
 ## Development
 
 Frontend source (Lit + TypeScript) lives in `frontend/`. To rebuild after making changes:
