@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Mealie",
+        "description": "Enter your Mealie instance URL and an API token (Mealie → Settings → API Tokens).",
+        "data": {
+          "url": "Mealie URL",
+          "mealie_token": "API Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to Mealie at that URL.",
+      "invalid_auth": "Mealie rejected that API token."
+    },
+    "abort": {
+      "already_configured": "This Mealie instance is already configured."
+    }
+  }
+}

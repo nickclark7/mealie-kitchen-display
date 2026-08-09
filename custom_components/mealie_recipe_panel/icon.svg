@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF8A50"/>
+      <stop offset="100%" stop-color="#E8542A"/>
+    </linearGradient>
+    <linearGradient id="hat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0F0F0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="256" height="256" rx="56" fill="url(#bg)"/>
+
+  <!-- kitchen display: rounded screen with a stand -->
+  <rect x="60" y="150" width="136" height="86" rx="14" fill="#FFFFFF" opacity="0.14"/>
+  <rect x="72" y="162" width="112" height="62" rx="8" fill="#FFFFFF" opacity="0.22"/>
+
+  <!-- chef hat -->
+  <g>
+    <path d="M128 46
+             c-20 0-34 15-36 32
+             c-15 3-25 16-25 31
+             c0 15 11 27 25 30
+             v18
+             c0 6 5 11 11 11
+             h50
+             c6 0 11-5 11-11
+             v-18
+             c14-3 25-15 25-30
+             c0-15-10-28-25-31
+             c-2-17-16-32-36-32z"
+          fill="url(#hat)"/>
+    <rect x="103" y="148" width="50" height="20" rx="4" fill="#FFFFFF"/>
+  </g>
+
+  <!-- steam / signal dots above the hat, doubling as "live data" cue -->
+  <circle cx="98" cy="34" r="6" fill="#FFFFFF" opacity="0.85"/>
+  <circle cx="128" cy="24" r="6" fill="#FFFFFF" opacity="0.85"/>
+  <circle cx="158" cy="34" r="6" fill="#FFFFFF" opacity="0.85"/>
+</svg>
