@@ -1,8 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { MealieClient } from "./mealie-client";
+import { MealieClient, describeError } from "./mealie-client";
 import type {
   Cookbook,
+  GeneratedRecipe,
   HomeAssistant,
   MealPlanEntry,
   PlanEntryType,
@@ -25,6 +26,8 @@ import "./components/mealplan-view";
 import "./components/random-picker-dialog";
 import "./components/confirm-dialog";
 import "./components/shopping-view";
+import "./components/ai-recipe-view";
+import "./components/ai-recipe-preview";
 import { addDaysLocal, mondayOfLocal, todayLocal } from "./date-utils";
 
 function withTag(tags: RecipeTag[], tagName: string, present: boolean): RecipeTag[] {
@@ -62,6 +65,19 @@ export class MealieRecipePanel extends LitElement {
   @state() private shoppingListItems: ShoppingListItem[] = [];
   @state() private shoppingListItemsLoading = false;
   @state() private showDeleteListConfirm = false;
+  @state() private showAiView = false;
+  @state() private aiPrompt = "";
+  @state() private aiGenerating = false;
+  @state() private aiError = "";
+  @state() private aiGeneratedRecipe: GeneratedRecipe | null = null;
+  @state() private aiImageBase64: string | null = null;
+  @state() private aiImageMime: string | null = null;
+  @state() private aiImageError: string | null = null;
+  @state() private aiSaving = false;
+  @state() private aiImporting = false;
+  @state() private aiLastAction: "generate" | "import" = "generate";
+  @state() private aiLastImportText = "";
+  @state() private aiLastImportImage: File | null = null;
 
   private client?: MealieClient;
 
@@ -95,7 +111,7 @@ export class MealieRecipePanel extends LitElement {
       const result = await this.client.searchRecipes({ search, cookbook: this.selectedCookbook || undefined });
       this.recipes = result.items;
     } catch (e) {
-      this.error = e instanceof Error ? e.message : "Failed to load recipes";
+      this.error = await describeError(e, "Failed to load recipes");
     } finally {
       this.loading = false;
     }
@@ -109,7 +125,7 @@ export class MealieRecipePanel extends LitElement {
     try {
       this.selectedRecipe = await this.client.getRecipe(slug);
     } catch (e) {
-      this.error = e instanceof Error ? e.message : "Failed to load recipe";
+      this.error = await describeError(e, "Failed to load recipe");
     }
   }
 
@@ -133,7 +149,7 @@ export class MealieRecipePanel extends LitElement {
       const result = await this.client.getMealplans(this.weekStart, addDaysLocal(this.weekStart, 6));
       this.mealplanEntries = result.items;
     } catch (e) {
-      this.error = e instanceof Error ? e.message : "Failed to load meal plan";
+      this.error = await describeError(e, "Failed to load meal plan");
     } finally {
       this.mealplanLoading = false;
     }
@@ -172,7 +188,7 @@ export class MealieRecipePanel extends LitElement {
     try {
       await this.client.setFavorite(slug, favorite);
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "Failed to update favorite";
+      this.error = await describeError(err, "Failed to update favorite");
       return;
     }
     this.updateRecipeTags(slug, "Favorite", favorite);
@@ -186,7 +202,7 @@ export class MealieRecipePanel extends LitElement {
     try {
       await this.client.setMyRecipe(slug, myRecipe);
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "Failed to update My Recipe";
+      this.error = await describeError(err, "Failed to update My Recipe");
       return;
     }
     this.updateRecipeTags(slug, "My Recipe", myRecipe);
@@ -199,7 +215,7 @@ export class MealieRecipePanel extends LitElement {
     try {
       await this.client.addToMealplan(this.selectedRecipe.id, e.detail.date, e.detail.entryType);
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "Failed to add to meal plan";
+      this.error = await describeError(err, "Failed to add to meal plan");
     }
     this.showMealplanDialog = false;
   }
@@ -215,7 +231,7 @@ export class MealieRecipePanel extends LitElement {
         this.selectedRecipe = { ...this.selectedRecipe, lastMade: isoDate };
       }
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "Failed to record last made date";
+      this.error = await describeError(err, "Failed to record last made date");
     }
     this.showLastmadeDialog = false;
   }
@@ -228,7 +244,7 @@ export class MealieRecipePanel extends LitElement {
       const result = await this.client.getShoppingLists();
       this.shoppingLists = result.items;
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "Failed to load shopping lists";
+      this.error = await describeError(err, "Failed to load shopping lists");
     }
   }
 
@@ -238,7 +254,7 @@ export class MealieRecipePanel extends LitElement {
       const listId = e.detail.listId ?? (await this.client.createShoppingList(e.detail.newListName!)).id;
       await this.client.addToShoppingList(listId, this.pendingShoppingItems);
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "Failed to add items to shopping list";
+      this.error = await describeError(err, "Failed to add items to shopping list");
     }
     this.showShoppingListDialog = false;
     this.pendingShoppingItems = [];
@@ -255,7 +271,7 @@ export class MealieRecipePanel extends LitElement {
         this.error = "No recipes found for that category yet.";
       }
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "Failed to pick a random recipe";
+      this.error = await describeError(err, "Failed to pick a random recipe");
     }
   }
 
@@ -266,7 +282,7 @@ export class MealieRecipePanel extends LitElement {
         const result = await this.client!.getShoppingLists();
         this.shoppingLists = result.items;
       } catch (err) {
-        this.error = err instanceof Error ? err.message : "Failed to load shopping lists";
+        this.error = await describeError(err, "Failed to load shopping lists");
         return;
       }
     }
@@ -282,7 +298,7 @@ export class MealieRecipePanel extends LitElement {
       const detail = await this.client.getShoppingListDetail(listId);
       this.shoppingListItems = detail.listItems;
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "Failed to load shopping list";
+      this.error = await describeError(err, "Failed to load shopping list");
     } finally {
       this.shoppingListItemsLoading = false;
     }
@@ -297,7 +313,7 @@ export class MealieRecipePanel extends LitElement {
     try {
       await this.client.setShoppingItemChecked(itemId, checked);
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "Failed to update item";
+      this.error = await describeError(err, "Failed to update item");
     }
   }
 
@@ -312,9 +328,103 @@ export class MealieRecipePanel extends LitElement {
       const next = this.shoppingLists[0]?.id;
       if (next) this.loadShoppingList(next);
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "Failed to delete shopping list";
+      this.error = await describeError(err, "Failed to delete shopping list");
     }
     this.showDeleteListConfirm = false;
+  }
+
+  private openAiView() {
+    this.showAiView = true;
+    this.aiGeneratedRecipe = null;
+    this.aiError = "";
+  }
+
+  private closeAiView() {
+    this.showAiView = false;
+    this.aiGeneratedRecipe = null;
+    this.aiPrompt = "";
+    this.aiError = "";
+    this.aiLastAction = "generate";
+    this.aiLastImportText = "";
+    this.aiLastImportImage = null;
+  }
+
+  private closeAiPreview() {
+    this.aiGeneratedRecipe = null;
+    this.aiImageBase64 = null;
+    this.aiImageMime = null;
+    this.aiImageError = null;
+  }
+
+  private async onAiGenerate() {
+    if (!this.client || !this.aiPrompt.trim()) return;
+    this.aiGenerating = true;
+    this.aiError = "";
+    this.aiLastAction = "generate";
+    try {
+      const result = await this.client.generateRecipe(this.aiPrompt.trim(), true);
+      this.aiGeneratedRecipe = result.recipe;
+      this.aiImageBase64 = result.imageBase64;
+      this.aiImageMime = result.imageMime;
+      this.aiImageError = result.imageError;
+    } catch (err) {
+      this.aiError = await describeError(err, "Failed to generate a recipe");
+    } finally {
+      this.aiGenerating = false;
+    }
+  }
+
+  private async onAiImport(e: CustomEvent<{ text: string; image: File | null }>) {
+    if (!this.client) return;
+    const { text, image } = e.detail;
+    if (!text.trim() && !image) return;
+    this.aiLastAction = "import";
+    this.aiLastImportText = text;
+    this.aiLastImportImage = image;
+    this.aiImporting = true;
+    this.aiError = "";
+    try {
+      const result = await this.client.importRecipe(text, image, true);
+      this.aiGeneratedRecipe = result.recipe;
+      this.aiImageBase64 = result.imageBase64;
+      this.aiImageMime = result.imageMime;
+      this.aiImageError = result.imageError;
+    } catch (err) {
+      this.aiError = await describeError(err, "Failed to import recipe");
+    } finally {
+      this.aiImporting = false;
+    }
+  }
+
+  private onAiRegenerate() {
+    if (this.aiLastAction === "import") {
+      this.onAiImport(
+        new CustomEvent("import", {
+          detail: { text: this.aiLastImportText, image: this.aiLastImportImage },
+        })
+      );
+    } else {
+      this.onAiGenerate();
+    }
+  }
+
+  private async onAiSaveRecipe(e: CustomEvent<{ recipe: GeneratedRecipe }>) {
+    if (!this.client) return;
+    this.aiSaving = true;
+    try {
+      const { slug } = await this.client.saveGeneratedRecipe(
+        e.detail.recipe,
+        this.aiImageBase64,
+        this.aiImageMime
+      );
+      this.closeAiView();
+      this.loadRecipes(this.searchQuery);
+      this.openRecipe(slug);
+    } catch (err) {
+      this.aiError = await describeError(err, "Failed to save recipe to Mealie");
+    } finally {
+      this.aiSaving = false;
+    }
   }
 
   private async onDeleteConfirm() {
@@ -326,7 +436,7 @@ export class MealieRecipePanel extends LitElement {
       this.selectedRecipe = null;
       this.cameFromMealplan = false;
     } catch (err) {
-      this.error = err instanceof Error ? err.message : "Failed to delete recipe";
+      this.error = await describeError(err, "Failed to delete recipe");
     }
     this.showDeleteConfirm = false;
   }
@@ -424,6 +534,37 @@ export class MealieRecipePanel extends LitElement {
       `;
     }
 
+    if (this.showAiView) {
+      if (this.aiGeneratedRecipe) {
+        return html`
+          <panel-shell title="AI Recipe" showBack @back=${() => this.closeAiPreview()}>
+            <ai-recipe-preview
+              .recipe=${this.aiGeneratedRecipe}
+              .imageBase64=${this.aiImageBase64}
+              .imageMime=${this.aiImageMime}
+              .imageError=${this.aiImageError}
+              .saving=${this.aiSaving}
+              @save=${(e: CustomEvent<{ recipe: GeneratedRecipe }>) => this.onAiSaveRecipe(e)}
+              @regenerate=${() => this.onAiRegenerate()}
+            ></ai-recipe-preview>
+          </panel-shell>
+        `;
+      }
+      return html`
+        <panel-shell title="AI Recipe Finder" showBack @back=${() => this.closeAiView()}>
+          <ai-recipe-view
+            .prompt=${this.aiPrompt}
+            .generating=${this.aiGenerating}
+            .importing=${this.aiImporting}
+            .error=${this.aiError}
+            @prompt-change=${(e: CustomEvent<{ value: string }>) => (this.aiPrompt = e.detail.value)}
+            @generate=${() => this.onAiGenerate()}
+            @import=${(e: CustomEvent<{ text: string; image: File | null }>) => this.onAiImport(e)}
+          ></ai-recipe-view>
+        </panel-shell>
+      `;
+    }
+
     return html`
       <panel-shell title="Recipes">
         <span slot="header-extra" style="display:flex;">
@@ -447,6 +588,13 @@ export class MealieRecipePanel extends LitElement {
             @click=${() => this.openShoppingView()}
           >
             🛒
+          </button>
+          <button
+            style="border:none;background:transparent;font-size:24px;padding:8px;min-width:44px;min-height:44px;cursor:pointer;"
+            aria-label="AI Recipe Finder"
+            @click=${() => this.openAiView()}
+          >
+            ✨
           </button>
         </span>
         <random-picker-dialog

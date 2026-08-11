@@ -17,5 +17,17 @@
     "abort": {
       "already_configured": "This Mealie instance is already configured."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "AI Recipe Finder",
+        "description": "Optional: pick which AI Task entities power the AI recipe finder. Leave the text entity unset to hide that feature.",
+        "data": {
+          "ai_text_entity": "AI Task entity for recipe text",
+          "ai_image_entity": "AI Task entity for recipe images (optional)"
+        }
+      }
+    }
   }
 }

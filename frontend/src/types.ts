@@ -91,6 +91,24 @@ export interface RecipeDetail extends RecipeSummary {
   recipeInstructions: RecipeInstruction[];
 }
 
+export interface GeneratedRecipe {
+  name: string;
+  description: string;
+  recipeServings: number;
+  prepTime: string | null;
+  cookTime: string | null;
+  totalTime: string | null;
+  ingredients: string[];
+  instructions: string[];
+}
+
+export interface GenerateRecipeResult {
+  recipe: GeneratedRecipe;
+  imageBase64: string | null;
+  imageMime: string | null;
+  imageError: string | null;
+}
+
 export interface PaginatedResponse<T> {
   page: number;
   per_page: number;

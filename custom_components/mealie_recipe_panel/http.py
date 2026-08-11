@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import logging
+import os
 import random
 import uuid
 
@@ -10,12 +12,21 @@ from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.network import get_url
 
-from .const import API_URL_BASE, CONF_MEALIE_TOKEN, DOMAIN
+from .const import (
+    API_URL_BASE,
+    CONF_AI_IMAGE_ENTITY,
+    CONF_AI_TEXT_ENTITY,
+    CONF_MEALIE_TOKEN,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
+_IMPORT_MEDIA_SUBDIR = "mealie_recipe_panel"
 _ALLOWED_IMAGE_SIZES = {"tiny-original", "min-original", "original"}
 _VALID_ENTRY_TYPES = {"breakfast", "lunch", "dinner", "side", "snack", "drink", "dessert"}
 _RANDOM_MODES = {"all", "my-recipes", "favorites", "made-before"}
@@ -43,6 +54,12 @@ class MealieProxyView(HomeAssistantView):
         if not entries:
             return None
         return entries[0].data
+
+    def _entry_options(self) -> dict:
+        entries = self.hass.config_entries.async_entries(DOMAIN)
+        if not entries:
+            return {}
+        return entries[0].options
 
     async def _mealie_get(self, path: str, *, params: dict | None = None, binary: bool = False):
         data = self._entry_data()
@@ -146,6 +163,75 @@ class MealieProxyView(HomeAssistantView):
             me = await self._mealie_get("/api/users/self")
             cache["user_id"] = me["id"]
         return cache["user_id"]
+
+    async def _generate_image(self, entity_id: str, subject: str) -> tuple[str | None, str | None]:
+        result = await self.hass.services.async_call(
+            "ai_task",
+            "generate_image",
+            {
+                "task_name": "Generate recipe image",
+                "instructions": f"An appetizing, realistic photo of: {subject}",
+                "entity_id": entity_id,
+            },
+            blocking=True,
+            return_response=True,
+        )
+        if not isinstance(result, dict):
+            raise HomeAssistantError(f"Unexpected ai_task.generate_image response type: {type(result)!r}")
+
+        # The service response never carries raw bytes — ai_task.generate_image
+        # stores the image via the media_source component and returns a
+        # short-lived signed URL instead (HA core pops "image_data" out of the
+        # dict before returning it). Fetch the bytes from that signed URL
+        # ourselves, immediately, before it expires.
+        signed_path = result.get("url")
+        if not signed_path:
+            raise HomeAssistantError(
+                "ai_task.generate_image response had no image URL (got keys: "
+                f"{list(result.keys())})"
+            )
+        mime_type = result.get("mime_type", "image/png")
+        base_url = get_url(self.hass, allow_internal=True, allow_ip=True, prefer_external=False)
+        session = async_get_clientsession(self.hass)
+        try:
+            async with session.get(f"{base_url}{signed_path}", timeout=aiohttp.ClientTimeout(total=30)) as resp:
+                if resp.status != 200:
+                    raise HomeAssistantError(f"Could not fetch generated image (HTTP {resp.status})")
+                image_bytes = await resp.read()
+        except aiohttp.ClientError as err:
+            raise HomeAssistantError(f"Could not fetch generated image: {err}") from err
+        return base64.b64encode(image_bytes).decode("ascii"), mime_type
+
+    async def _save_attachment(self, image_bytes: bytes, extension: str) -> tuple[str, str]:
+        """Write an uploaded image under HA's local media root for ai_task attachments.
+
+        ai_task.generate_data only accepts attachments as media-source URIs
+        (the same shape the Media selector produces), not raw bytes — so a
+        multimodal import has to round-trip through a scratch file here.
+        """
+        media_dirs = self.hass.config.media_dirs
+        root = media_dirs.get("local") or self.hass.config.path("media")
+        subdir = os.path.join(root, _IMPORT_MEDIA_SUBDIR)
+        filename = f"{uuid.uuid4().hex}.{extension}"
+        path = os.path.join(subdir, filename)
+
+        def _write() -> None:
+            os.makedirs(subdir, exist_ok=True)
+            with open(path, "wb") as f:
+                f.write(image_bytes)
+
+        await self.hass.async_add_executor_job(_write)
+        media_content_id = f"media-source://media_source/local/{_IMPORT_MEDIA_SUBDIR}/{filename}"
+        return path, media_content_id
+
+    async def _delete_attachment(self, path: str) -> None:
+        def _remove() -> None:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
+        await self.hass.async_add_executor_job(_remove)
 
 
 class MealieRecipesView(MealieProxyView):
@@ -323,6 +409,251 @@ class MealieMyRecipeView(MealieProxyView):
         return web.json_response({"my_recipe": want})
 
 
+_AI_RECIPE_STRUCTURE = {
+    "name": {"selector": {"text": {}}},
+    "description": {"selector": {"text": {}}},
+    "recipeServings": {"selector": {"number": {}}},
+    "prepTime": {"selector": {"text": {}}},
+    "cookTime": {"selector": {"text": {}}},
+    "totalTime": {"selector": {"text": {}}},
+    "ingredients": {"selector": {"text": {"multiple": True}}},
+    "instructions": {"selector": {"text": {"multiple": True}}},
+}
+
+
+class MealieGenerateRecipeView(MealieProxyView):
+    """Ask a user-configured ai_task entity for a recipe, and optionally an image.
+
+    Nothing is written to Mealie here — this is a preview. Saving is a
+    separate step (MealieSaveRecipeView) so the user can review/regenerate
+    first.
+    """
+
+    url = f"{API_URL_BASE}/ai/generate-recipe"
+    name = f"api:{DOMAIN}:ai_generate_recipe"
+
+    async def post(self, request: web.Request) -> web.Response:
+        options = self._entry_options()
+        text_entity = options.get(CONF_AI_TEXT_ENTITY)
+        if not text_entity:
+            raise web.HTTPBadRequest(
+                reason="No AI Task entity configured — set one in this integration's options"
+            )
+
+        body = await request.json()
+        prompt = (body.get("prompt") or "").strip()
+        if not prompt:
+            raise web.HTTPBadRequest(reason="prompt is required")
+
+        try:
+            result = await self.hass.services.async_call(
+                "ai_task",
+                "generate_data",
+                {
+                    "task_name": "Generate recipe",
+                    "instructions": (
+                        "Write a complete, realistic recipe for this request: "
+                        f"{prompt}\n\n"
+                        "ingredients must be a list of plain, ready-to-display strings "
+                        "such as '2 cups flour', not separate quantity/unit/food fields. "
+                        "instructions must be a list of plain step strings, one per step."
+                    ),
+                    "structure": _AI_RECIPE_STRUCTURE,
+                    "entity_id": text_entity,
+                },
+                blocking=True,
+                return_response=True,
+            )
+        except HomeAssistantError as err:
+            raise web.HTTPBadGateway(reason=f"AI recipe generation failed: {err}") from err
+
+        recipe = result.get("data", result) if isinstance(result, dict) else result
+
+        image_base64 = None
+        image_mime = None
+        image_error = None
+        image_entity = options.get(CONF_AI_IMAGE_ENTITY)
+        if bool(body.get("generateImage")) and image_entity:
+            try:
+                image_base64, image_mime = await self._generate_image(
+                    image_entity, recipe.get("name") or prompt
+                )
+            except HomeAssistantError as err:
+                _LOGGER.warning("AI image generation failed: %s", err)
+                image_error = str(err)
+
+        return web.json_response(
+            {
+                "recipe": recipe,
+                "imageBase64": image_base64,
+                "imageMime": image_mime,
+                "imageError": image_error,
+            }
+        )
+
+
+class MealieImportRecipeView(MealieProxyView):
+    """Transcribe a recipe from an uploaded photo and/or pasted text.
+
+    Reuses the exact same response shape as MealieGenerateRecipeView so the
+    frontend's preview/save flow works unchanged regardless of which path
+    produced the recipe.
+    """
+
+    url = f"{API_URL_BASE}/ai/import-recipe"
+    name = f"api:{DOMAIN}:ai_import_recipe"
+
+    async def post(self, request: web.Request) -> web.Response:
+        options = self._entry_options()
+        text_entity = options.get(CONF_AI_TEXT_ENTITY)
+        if not text_entity:
+            raise web.HTTPBadRequest(
+                reason="No AI Task entity configured — set one in this integration's options"
+            )
+
+        body = await request.json()
+        text = (body.get("text") or "").strip()
+        image_base64 = body.get("imageBase64")
+        if not text and not image_base64:
+            raise web.HTTPBadRequest(reason="An image, text, or both are required")
+
+        attachment_path: str | None = None
+        attachments: list[dict] | None = None
+        if image_base64:
+            mime = body.get("imageMime") or "image/jpeg"
+            extension = mime.split("/")[-1] if "/" in mime else "jpg"
+            try:
+                image_bytes = base64.b64decode(image_base64)
+            except (ValueError, TypeError) as err:
+                raise web.HTTPBadRequest(reason="Could not decode uploaded image") from err
+            attachment_path, media_content_id = await self._save_attachment(image_bytes, extension)
+            attachments = [{"media_content_id": media_content_id, "media_content_type": mime}]
+
+        instructions = ""
+        if attachments:
+            instructions += "Transcribe the recipe shown in the attached image into structured data. "
+        if text:
+            instructions += f"Use this additional recipe text, cleaning it up as needed:\n\n{text}\n\n"
+        instructions += (
+            "ingredients must be a list of plain, ready-to-display strings "
+            "such as '2 cups flour', not separate quantity/unit/food fields. "
+            "instructions must be a list of plain step strings, one per step. "
+            "If servings or times aren't stated in the source, make a reasonable estimate."
+        )
+
+        try:
+            service_data = {
+                "task_name": "Import recipe",
+                "instructions": instructions,
+                "structure": _AI_RECIPE_STRUCTURE,
+                "entity_id": text_entity,
+            }
+            if attachments:
+                service_data["attachments"] = attachments
+            result = await self.hass.services.async_call(
+                "ai_task",
+                "generate_data",
+                service_data,
+                blocking=True,
+                return_response=True,
+            )
+        except HomeAssistantError as err:
+            raise web.HTTPBadGateway(reason=f"AI recipe import failed: {err}") from err
+        finally:
+            if attachment_path:
+                await self._delete_attachment(attachment_path)
+
+        recipe = result.get("data", result) if isinstance(result, dict) else result
+
+        image_out_base64 = None
+        image_out_mime = None
+        image_error = None
+        image_entity = options.get(CONF_AI_IMAGE_ENTITY)
+        if bool(body.get("generateImage")) and image_entity:
+            try:
+                image_out_base64, image_out_mime = await self._generate_image(
+                    image_entity, recipe.get("name") or text or "this recipe"
+                )
+            except HomeAssistantError as err:
+                _LOGGER.warning("AI image generation failed: %s", err)
+                image_error = str(err)
+
+        return web.json_response(
+            {
+                "recipe": recipe,
+                "imageBase64": image_out_base64,
+                "imageMime": image_out_mime,
+                "imageError": image_error,
+            }
+        )
+
+
+class MealieSaveRecipeView(MealieProxyView):
+    """Persist a previously-generated (preview) recipe into Mealie."""
+
+    url = f"{API_URL_BASE}/ai/save-recipe"
+    name = f"api:{DOMAIN}:ai_save_recipe"
+
+    async def post(self, request: web.Request) -> web.Response:
+        body = await request.json()
+        recipe = body.get("recipe") or {}
+        name = (recipe.get("name") or "").strip()
+        if not name:
+            raise web.HTTPBadRequest(reason="recipe.name is required")
+
+        slug = await self._mealie_write("POST", "/api/recipes", json_body={"name": name})
+        if not isinstance(slug, str):
+            raise web.HTTPBadGateway(reason="Unexpected response creating recipe in Mealie")
+
+        patch_body = {
+            "description": recipe.get("description", ""),
+            "recipeServings": recipe.get("recipeServings") or 1,
+            "prepTime": recipe.get("prepTime") or None,
+            "cookTime": recipe.get("cookTime") or None,
+            "totalTime": recipe.get("totalTime") or None,
+            # Mealie computes "display" itself from quantity/unit/food/note —
+            # it's not a writable field despite being accepted by the schema.
+            # Without structured quantity/unit/food, "note" is what actually
+            # persists and becomes the shown ingredient line.
+            "recipeIngredient": [{"note": str(i)} for i in recipe.get("ingredients", [])],
+            "recipeInstructions": [{"text": str(s)} for s in recipe.get("instructions", [])],
+        }
+        await self._mealie_write("PATCH", f"/api/recipes/{slug}", json_body=patch_body)
+
+        image_base64 = body.get("imageBase64")
+        if image_base64:
+            mime = body.get("imageMime") or "image/png"
+            extension = mime.split("/")[-1] if "/" in mime else "png"
+            try:
+                image_bytes = base64.b64decode(image_base64)
+            except (ValueError, TypeError) as err:
+                _LOGGER.warning("Could not decode generated recipe image: %s", err)
+            else:
+                await self._upload_recipe_image(slug, image_bytes, extension)
+
+        return web.json_response({"slug": slug})
+
+    async def _upload_recipe_image(self, slug: str, image_bytes: bytes, extension: str) -> None:
+        data = self._entry_data()
+        if data is None:
+            return
+        form = aiohttp.FormData()
+        form.add_field("image", image_bytes, filename=f"image.{extension}", content_type=f"image/{extension}")
+        form.add_field("extension", extension)
+        session = async_get_clientsession(self.hass)
+        try:
+            async with session.put(
+                f"{data[CONF_URL]}/api/recipes/{slug}/image",
+                data=form,
+                headers={"Authorization": f"Bearer {data[CONF_MEALIE_TOKEN]}"},
+                timeout=aiohttp.ClientTimeout(total=20),
+            ) as resp:
+                if resp.status not in (200, 201):
+                    _LOGGER.warning("Mealie rejected recipe image upload: HTTP %s", resp.status)
+        except aiohttp.ClientError as err:
+            _LOGGER.warning("Error uploading recipe image to Mealie: %s", err)
+
+
 class MealieMealplanView(MealieProxyView):
     url = f"{API_URL_BASE}/mealplans"
     name = f"api:{DOMAIN}:mealplans"
@@ -416,6 +747,9 @@ VIEWS = (
     MealieRecipeDetailView,
     MealieFavoriteView,
     MealieMyRecipeView,
+    MealieGenerateRecipeView,
+    MealieImportRecipeView,
+    MealieSaveRecipeView,
     MealieMealplanView,
     MealieLastMadeView,
     MealieShoppingListsView,

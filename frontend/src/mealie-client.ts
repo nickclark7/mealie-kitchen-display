@@ -1,5 +1,7 @@
 import type {
   Cookbook,
+  GeneratedRecipe,
+  GenerateRecipeResult,
   HomeAssistant,
   MealPlanEntry,
   PaginatedResponse,
@@ -113,6 +115,70 @@ export class MealieClient {
   async deleteShoppingList(listId: string): Promise<unknown> {
     return this.hass.callApi("DELETE", `mealie_recipe_panel/shopping-lists/${listId}`);
   }
+
+  async generateRecipe(prompt: string, generateImage: boolean): Promise<GenerateRecipeResult> {
+    return this.hass.callApi("POST", `mealie_recipe_panel/ai/generate-recipe`, { prompt, generateImage });
+  }
+
+  async saveGeneratedRecipe(
+    recipe: GeneratedRecipe,
+    imageBase64: string | null,
+    imageMime: string | null
+  ): Promise<{ slug: string }> {
+    return this.hass.callApi("POST", `mealie_recipe_panel/ai/save-recipe`, { recipe, imageBase64, imageMime });
+  }
+
+  async importRecipe(text: string, image: File | null, generateImage: boolean): Promise<GenerateRecipeResult> {
+    let imageBase64: string | null = null;
+    let imageMime: string | null = null;
+    if (image) {
+      imageBase64 = await fileToBase64(image);
+      imageMime = image.type || "image/jpeg";
+    }
+    return this.hass.callApi("POST", `mealie_recipe_panel/ai/import-recipe`, {
+      text,
+      imageBase64,
+      imageMime,
+      generateImage,
+    });
+  }
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // dataURL looks like "data:image/jpeg;base64,<data>" — strip the prefix.
+      const result = reader.result as string;
+      resolve(result.slice(result.indexOf(",") + 1));
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// hass.callApi doesn't reliably reject with a plain Error — depending on the
+// failure it may throw a fetch Response, or a plain {message} object. Without
+// this, `err instanceof Error` silently swallows the real reason and every
+// error message in the UI collapses to a generic fallback string.
+export async function describeError(err: unknown, fallback: string): Promise<string> {
+  if (err instanceof Error && err.message) return err.message;
+  if (err && typeof err === "object") {
+    const maybeResponse = err as Partial<Response>;
+    if (typeof maybeResponse.text === "function") {
+      try {
+        const text = await maybeResponse.text();
+        if (text) return text;
+      } catch {
+        // fall through
+      }
+    }
+    const maybeMessage = (err as { message?: unknown }).message;
+    if (typeof maybeMessage === "string" && maybeMessage) return maybeMessage;
+    const maybeStatus = (err as { status?: unknown }).status;
+    if (typeof maybeStatus === "number") return `Request failed (HTTP ${maybeStatus})`;
+  }
+  return fallback;
 }
 
 export const FAVORITE_TAG_NAME = "Favorite";

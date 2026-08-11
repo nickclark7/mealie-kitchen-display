@@ -9,9 +9,10 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import CONF_MEALIE_TOKEN, DOMAIN
+from .const import CONF_AI_IMAGE_ENTITY, CONF_AI_TEXT_ENTITY, CONF_MEALIE_TOKEN, DOMAIN
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -52,6 +53,12 @@ async def _validate_input(hass: HomeAssistant, data: dict[str, Any]) -> str:
 class MealieRecipePanelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
+    @staticmethod
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> MealieRecipePanelOptionsFlow:
+        return MealieRecipePanelOptionsFlow()
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
@@ -77,3 +84,33 @@ class MealieRecipePanelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
+
+
+class MealieRecipePanelOptionsFlow(config_entries.OptionsFlow):
+    """Lets the user pick which ai_task entities power the AI recipe finder.
+
+    Both are optional: leaving the text entity unset just hides that feature
+    in the panel rather than blocking setup. The image entity is independent
+    since not every configured LLM can generate images.
+    """
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        current = self.config_entry.options
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_AI_TEXT_ENTITY,
+                    description={"suggested_value": current.get(CONF_AI_TEXT_ENTITY)},
+                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="ai_task")),
+                vol.Optional(
+                    CONF_AI_IMAGE_ENTITY,
+                    description={"suggested_value": current.get(CONF_AI_IMAGE_ENTITY)},
+                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="ai_task")),
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)

@@ -2,6 +2,8 @@ DOMAIN = "mealie_recipe_panel"
 
 CONF_MEALIE_URL = "mealie_url"
 CONF_MEALIE_TOKEN = "mealie_token"
+CONF_AI_TEXT_ENTITY = "ai_text_entity"
+CONF_AI_IMAGE_ENTITY = "ai_image_entity"
 
 API_URL_BASE = f"/api/{DOMAIN}"
 STATIC_URL_BASE = f"/{DOMAIN}_static"
