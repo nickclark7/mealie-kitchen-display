@@ -1,6 +1,6 @@
 # Mealie Kitchen Display
 
-A touch-friendly Home Assistant sidebar panel for browsing, searching, and cooking from your [Mealie](https://mealie.io/) recipes — built for a kitchen tablet, launchable from the sidebar (like Music Assistant) or from a Lovelace card.
+A touch-friendly Home Assistant sidebar panel for browsing, searching, and cooking from your [Mealie](https://mealie.io/) recipes — built for a kitchen tablet, includes a number of optional AI based features using your existing home assistant AI providers to generate, transcribe and optonally upload recipies to launchable from the sidebar or an included Lovelace card.
 
 All requests to Mealie are proxied server-side through Home Assistant, so it works regardless of whether HA or Mealie run on HTTP or HTTPS — the browser only ever talks to HA's own origin.
 <p align="center">
@@ -68,6 +68,7 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
 - Delete a recipe, with confirmation
 - A matching Lovelace launcher card, so the panel can also be opened from any dashboard
 - **AI recipe finder**: generate a recipe from a text description, or import one from a photo and/or pasted text, using your own Home Assistant `ai_task.*` entities — see [AI Recipe Finder](#ai-recipe-finder) below
+- AI tasks can be disabled and removed form the interface for those who dont want that capability
 
 ## Installation
 
