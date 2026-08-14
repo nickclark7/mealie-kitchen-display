@@ -4,10 +4,11 @@ A touch-friendly Home Assistant sidebar panel for browsing, searching, and cooki
 
 All requests to Mealie are proxied server-side through Home Assistant, so it works regardless of whether HA or Mealie run on HTTP or HTTPS — the browser only ever talks to HA's own origin.
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/27e6a962-536b-4d59-bcd4-a875c359de9a" width="600" alt="Screenshot 1"/>
-</p>
-
+ 
 <p align="center">
+  <a href="https://github.com/user-attachments/assets/27e6a962-536b-4d59-bcd4-a875c359de9a">
+    <img src="https://github.com/user-attachments/assets/27e6a962-536b-4d59-bcd4-a875c359de9a" width="180" alt="Screenshot 1"/>
+  </a>
   <a href="https://github.com/user-attachments/assets/249e1c62-9cc9-4781-9d1b-55b2d8dae5ff">
     <img src="https://github.com/user-attachments/assets/249e1c62-9cc9-4781-9d1b-55b2d8dae5ff" width="180" alt="Screenshot 2"/>
   </a>
@@ -17,10 +18,10 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
   <a href="https://github.com/user-attachments/assets/4df34292-ac35-4263-bd68-26ee5a7b9c95">
     <img src="https://github.com/user-attachments/assets/4df34292-ac35-4263-bd68-26ee5a7b9c95" width="180" alt="Screenshot 4"/>
   </a>
+  <br/>
   <a href="https://github.com/user-attachments/assets/ef9ea418-dd4b-451b-a121-6232b3ed024e">
     <img src="https://github.com/user-attachments/assets/ef9ea418-dd4b-451b-a121-6232b3ed024e" width="180" alt="Screenshot 5"/>
   </a>
-  <br/>
   <a href="https://github.com/user-attachments/assets/d10737ff-20bc-434a-b38a-0112dfc64461">
     <img src="https://github.com/user-attachments/assets/d10737ff-20bc-434a-b38a-0112dfc64461" width="180" alt="Screenshot 6"/>
   </a>
@@ -30,10 +31,10 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
   <a href="https://github.com/user-attachments/assets/bae18b40-04c9-44ce-8ce6-17efa57d2524">
     <img src="https://github.com/user-attachments/assets/bae18b40-04c9-44ce-8ce6-17efa57d2524" width="180" alt="Screenshot 8"/>
   </a>
+  <br/>
   <a href="https://github.com/user-attachments/assets/2fa4e7d4-bec7-49f7-be45-2f09081fd118">
     <img src="https://github.com/user-attachments/assets/2fa4e7d4-bec7-49f7-be45-2f09081fd118" width="180" alt="Screenshot 9"/>
   </a>
-  <br/>
   <a href="https://github.com/user-attachments/assets/a89de399-841f-401e-9271-3f29e1cc8703">
     <img src="https://github.com/user-attachments/assets/a89de399-841f-401e-9271-3f29e1cc8703" width="180" alt="Screenshot 10"/>
   </a>
@@ -43,10 +44,10 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
   <a href="https://github.com/user-attachments/assets/07d57660-7ec7-4e85-a16f-152a36e9db79">
     <img src="https://github.com/user-attachments/assets/07d57660-7ec7-4e85-a16f-152a36e9db79" width="180" alt="Screenshot 12"/>
   </a>
+  <br/>
   <a href="https://github.com/user-attachments/assets/5c4ef660-7630-4507-af70-730d211add60">
     <img src="https://github.com/user-attachments/assets/5c4ef660-7630-4507-af70-730d211add60" width="180" alt="Screenshot 13"/>
   </a>
-  <br/>
   <a href="https://github.com/user-attachments/assets/0f0eede4-9886-4871-9b8a-9b7e9d44f083">
     <img src="https://github.com/user-attachments/assets/0f0eede4-9886-4871-9b8a-9b7e9d44f083" width="180" alt="Screenshot 14"/>
   </a>
@@ -54,8 +55,6 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
     <img src="https://github.com/user-attachments/assets/2acd1009-35b7-4572-82ef-10daa2749421" width="180" alt="Screenshot 15"/>
   </a>
 </p>
-
-
 
 ## Features
 
