@@ -7,6 +7,7 @@ export class AiRecipeView extends LitElement {
   @property({ type: Boolean }) generating = false;
   @property({ type: Boolean }) importing = false;
   @property({ type: String }) error = "";
+  @property({ type: Boolean }) aiConfigured = true;
 
   @state() private tab: "generate" | "import" = "generate";
   @state() private importText = "";
@@ -124,6 +125,27 @@ export class AiRecipeView extends LitElement {
       font-size: 13px;
       margin: 14px 0;
     }
+    .setup-needed {
+      text-align: center;
+      padding: 32px 16px;
+    }
+    .setup-needed .icon {
+      font-size: 40px;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .setup-needed .title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+    .setup-needed .body {
+      color: var(--secondary-text-color, #757575);
+      font-size: 15px;
+      line-height: 1.5;
+      max-width: 340px;
+      margin: 0 auto;
+    }
   `;
 
   disconnectedCallback() {
@@ -213,7 +235,24 @@ export class AiRecipeView extends LitElement {
     `;
   }
 
+  private renderSetupNeeded() {
+    return html`
+      <div class="setup-needed">
+        <span class="icon">✨</span>
+        <p class="title">AI Recipe Finder needs to be set up</p>
+        <p class="body">
+          Choose an AI Task entity for this integration under
+          <strong>Settings → Devices &amp; Services → Mealie Kitchen Display → Configure</strong>
+          to start generating and importing recipes with AI.
+        </p>
+      </div>
+    `;
+  }
+
   render() {
+    if (!this.aiConfigured) {
+      return this.renderSetupNeeded();
+    }
     return html`
       <div class="tabs">
         <button class=${this.tab === "generate" ? "active" : ""} @click=${() => (this.tab = "generate")}>

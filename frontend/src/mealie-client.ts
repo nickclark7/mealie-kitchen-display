@@ -1,16 +1,18 @@
 import type {
   Cookbook,
   GeneratedRecipe,
-  GenerateRecipeResult,
+  GenerateImageResult,
   HomeAssistant,
   MealPlanEntry,
   PaginatedResponse,
+  PanelConfig,
   PlanEntryType,
   RandomMode,
   RecipeCategory,
   RecipeDetail,
   RecipeSummary,
   RecipeTag,
+  RecipeUpdateBody,
   ShoppingList,
   ShoppingListDetail,
 } from "./types";
@@ -45,8 +47,20 @@ export class MealieClient {
     return this.hass.callApi("GET", `mealie_recipe_panel/cookbooks`);
   }
 
+  async getConfig(): Promise<PanelConfig> {
+    return this.hass.callApi("GET", `mealie_recipe_panel/config`);
+  }
+
   async getRecipe(slug: string): Promise<RecipeDetail> {
     return this.hass.callApi("GET", `mealie_recipe_panel/recipes/${slug}`);
+  }
+
+  // POST, not PATCH/PUT: this backend route fetches-then-merges the full
+  // recipe server-side, so it isn't a REST-partial-update in the usual
+  // sense, and POST keeps it consistent with every other mutation in this
+  // client.
+  async updateRecipe(slug: string, body: RecipeUpdateBody): Promise<RecipeDetail> {
+    return this.hass.callApi("POST", `mealie_recipe_panel/recipes/${slug}`, body);
   }
 
   async getCategories(): Promise<PaginatedResponse<RecipeCategory>> {
@@ -116,8 +130,13 @@ export class MealieClient {
     return this.hass.callApi("DELETE", `mealie_recipe_panel/shopping-lists/${listId}`);
   }
 
-  async generateRecipe(prompt: string, generateImage: boolean): Promise<GenerateRecipeResult> {
-    return this.hass.callApi("POST", `mealie_recipe_panel/ai/generate-recipe`, { prompt, generateImage });
+  async generateRecipe(prompt: string): Promise<GeneratedRecipe> {
+    const { recipe } = await this.hass.callApi<{ recipe: GeneratedRecipe }>(
+      "POST",
+      `mealie_recipe_panel/ai/generate-recipe`,
+      { prompt }
+    );
+    return recipe;
   }
 
   async saveGeneratedRecipe(
@@ -128,19 +147,32 @@ export class MealieClient {
     return this.hass.callApi("POST", `mealie_recipe_panel/ai/save-recipe`, { recipe, imageBase64, imageMime });
   }
 
-  async importRecipe(text: string, image: File | null, generateImage: boolean): Promise<GenerateRecipeResult> {
+  async importRecipe(text: string, image: File | null): Promise<GeneratedRecipe> {
     let imageBase64: string | null = null;
     let imageMime: string | null = null;
     if (image) {
       imageBase64 = await fileToBase64(image);
       imageMime = image.type || "image/jpeg";
     }
-    return this.hass.callApi("POST", `mealie_recipe_panel/ai/import-recipe`, {
-      text,
-      imageBase64,
-      imageMime,
-      generateImage,
-    });
+    const { recipe } = await this.hass.callApi<{ recipe: GeneratedRecipe }>(
+      "POST",
+      `mealie_recipe_panel/ai/import-recipe`,
+      { text, imageBase64, imageMime }
+    );
+    return recipe;
+  }
+
+  // Split out from generate/import (rather than requested inline) so the
+  // frontend can show the recipe text immediately and let the — much
+  // slower — photo pop in once it's ready, instead of blocking on both.
+  async generateRecipeImage(subject: string, guidance?: string): Promise<GenerateImageResult> {
+    return this.hass.callApi("POST", `mealie_recipe_panel/ai/generate-recipe-image`, { subject, guidance });
+  }
+
+  // Attaches a photo to a recipe that's already been saved — used when the
+  // user saves before the background image finishes generating.
+  async attachRecipeImage(slug: string, imageBase64: string, imageMime: string | null): Promise<unknown> {
+    return this.hass.callApi("POST", `mealie_recipe_panel/recipes/${slug}/ai-image`, { imageBase64, imageMime });
   }
 }
 

@@ -22,8 +22,9 @@
     "step": {
       "init": {
         "title": "AI Recipe Finder",
-        "description": "Optional: pick which AI Task entities power the AI recipe finder. Leave the text entity unset to hide that feature.",
+        "description": "Turn AI recipe features on or off, and pick which AI Task entities power them. If AI is enabled but no text entity is chosen yet, the panel still shows the AI buttons and prompts the user to finish setup here.",
         "data": {
+          "ai_enabled": "Enable AI recipe features",
           "ai_text_entity": "AI Task entity for recipe text",
           "ai_image_entity": "AI Task entity for recipe images (optional)"
         }

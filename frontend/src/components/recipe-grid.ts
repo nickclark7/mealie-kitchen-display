@@ -8,6 +8,8 @@ export class RecipeGrid extends LitElement {
   @property({ attribute: false }) recipes: RecipeSummary[] = [];
   @property({ attribute: false }) imageUrl: (recipe: RecipeSummary) => string = () => "";
   @property({ type: Boolean }) loading = false;
+  @property({ type: String }) searchQuery = "";
+  @property({ type: Boolean }) aiEnabled = true;
 
   static styles = css`
     :host {
@@ -85,6 +87,36 @@ export class RecipeGrid extends LitElement {
       color: var(--secondary-text-color, #757575);
       font-size: 18px;
     }
+    .empty-ai {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .ai-card {
+      font-family: inherit;
+      background: var(--card-background-color, #fff);
+      border: 2px dashed var(--primary-color, #03a9f4);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+      padding: 20px 12px;
+      min-height: 48px;
+      color: var(--primary-color, #03a9f4);
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .ai-card:active {
+      transform: scale(0.98);
+    }
+    .ai-card .icon {
+      font-size: 30px;
+    }
   `;
 
   private onSelect(recipe: RecipeSummary) {
@@ -98,12 +130,33 @@ export class RecipeGrid extends LitElement {
     );
   }
 
+  private onAiGenerateFromSearch() {
+    this.dispatchEvent(
+      new CustomEvent("ai-generate-from-search", { detail: { query: this.searchQuery.trim() } })
+    );
+  }
+
+  private renderAiCard() {
+    return html`
+      <button class="card ai-card" @click=${() => this.onAiGenerateFromSearch()}>
+        <span class="icon">✨</span>
+        <span>Generate "${this.searchQuery.trim()}" with AI</span>
+      </button>
+    `;
+  }
+
   render() {
+    const query = this.aiEnabled ? this.searchQuery.trim() : "";
     if (this.loading) {
       return html`<div class="empty">Loading recipes…</div>`;
     }
     if (!this.recipes.length) {
-      return html`<div class="empty">No recipes found.</div>`;
+      return html`
+        <div class="empty">
+          No recipes found.
+          ${query ? html`<div class="empty-ai">${this.renderAiCard()}</div>` : nothing}
+        </div>
+      `;
     }
     return html`
       <div class="grid">
@@ -133,6 +186,7 @@ export class RecipeGrid extends LitElement {
             </div>
           `;
         })}
+        ${query ? this.renderAiCard() : nothing}
       </div>
     `;
   }

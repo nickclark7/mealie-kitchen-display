@@ -12,7 +12,13 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import CONF_AI_IMAGE_ENTITY, CONF_AI_TEXT_ENTITY, CONF_MEALIE_TOKEN, DOMAIN
+from .const import (
+    CONF_AI_ENABLED,
+    CONF_AI_IMAGE_ENTITY,
+    CONF_AI_TEXT_ENTITY,
+    CONF_MEALIE_TOKEN,
+    DOMAIN,
+)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -87,11 +93,13 @@ class MealieRecipePanelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class MealieRecipePanelOptionsFlow(config_entries.OptionsFlow):
-    """Lets the user pick which ai_task entities power the AI recipe finder.
+    """Lets the user turn AI features on/off and pick which ai_task entities power them.
 
-    Both are optional: leaving the text entity unset just hides that feature
-    in the panel rather than blocking setup. The image entity is independent
-    since not every configured LLM can generate images.
+    The entities are optional: leaving the text entity unset doesn't hide the
+    feature (new users should still see it and be nudged to set it up) — the
+    panel shows a "needs configuring" message instead. CONF_AI_ENABLED is the
+    separate, explicit switch for hiding AI features entirely. The image
+    entity is independent since not every configured LLM can generate images.
     """
 
     async def async_step_init(
@@ -103,6 +111,9 @@ class MealieRecipePanelOptionsFlow(config_entries.OptionsFlow):
         current = self.config_entry.options
         schema = vol.Schema(
             {
+                vol.Required(
+                    CONF_AI_ENABLED, default=current.get(CONF_AI_ENABLED, True)
+                ): selector.BooleanSelector(),
                 vol.Optional(
                     CONF_AI_TEXT_ENTITY,
                     description={"suggested_value": current.get(CONF_AI_TEXT_ENTITY)},

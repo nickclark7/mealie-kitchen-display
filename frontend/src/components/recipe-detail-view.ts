@@ -84,6 +84,8 @@ export class RecipeDetailView extends LitElement {
     .pill-button.danger {
       color: #db4437;
       border-color: #db4437;
+    }
+    .pill-button.edit {
       margin-left: auto;
     }
     .ingredients-header {
@@ -191,6 +193,11 @@ export class RecipeDetailView extends LitElement {
     this.dispatchEvent(new CustomEvent("open-delete-confirm"));
   }
 
+  private onEdit() {
+    if (!this.recipe) return;
+    this.dispatchEvent(new CustomEvent("edit"));
+  }
+
   private toggleIngredient(index: number) {
     const next = new Set(this.checkedIngredients);
     if (next.has(index)) next.delete(index);
@@ -240,6 +247,7 @@ export class RecipeDetailView extends LitElement {
         <button class="pill-button" @click=${this.onOpenLastMade}>
           ${recipe.lastMade ? `✓ Last made ${recipe.lastMade.slice(0, 10)}` : "🍽 Mark as Made"}
         </button>
+        <button class="pill-button edit" @click=${this.onEdit}>✏️ Edit</button>
         <button class="pill-button danger" @click=${this.onDelete}>🗑 Delete</button>
       </div>
       ${recipe.description ? html`<p>${recipe.description}</p>` : nothing}

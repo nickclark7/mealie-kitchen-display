@@ -9,6 +9,7 @@ export class AiRecipePreview extends LitElement {
   @property({ type: String }) imageBase64: string | null = null;
   @property({ type: String }) imageMime: string | null = null;
   @property({ type: String }) imageError: string | null = null;
+  @property({ type: Boolean }) imageLoading = false;
   @property({ type: Boolean }) saving = false;
 
   // The parent hands us a freshly-generated recipe as a preview; we keep our
@@ -46,6 +47,29 @@ export class AiRecipePreview extends LitElement {
       object-fit: cover;
       border-radius: 12px;
       margin-bottom: 12px;
+    }
+    .image-placeholder {
+      width: 100%;
+      height: 160px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--divider-color, #e0e0e0);
+      color: var(--secondary-text-color, #757575);
+      font-size: 14px;
+      animation: image-placeholder-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes image-placeholder-pulse {
+      0%,
+      100% {
+        opacity: 0.6;
+      }
+      50% {
+        opacity: 1;
+      }
     }
     p.image-notice {
       color: var(--secondary-text-color, #757575);
@@ -355,8 +379,12 @@ export class AiRecipePreview extends LitElement {
     return html`
       ${this.imageBase64
         ? html`<img class="hero" src="data:${this.imageMime || "image/png"};base64,${this.imageBase64}" alt="" />`
+        : this.imageLoading
+          ? html`<div class="image-placeholder">📷 Generating photo…</div>`
+          : nothing}
+      ${!this.imageBase64 && !this.imageLoading && this.imageError
+        ? html`<p class="image-notice">No image generated: ${this.imageError}</p>`
         : nothing}
-      ${!this.imageBase64 && this.imageError ? html`<p class="image-notice">No image generated: ${this.imageError}</p>` : nothing}
 
       <div class="action-row">
         <button class="pill-button save" ?disabled=${!canSave} @click=${this.onSave}>

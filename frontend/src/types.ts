@@ -91,6 +91,20 @@ export interface RecipeDetail extends RecipeSummary {
   recipeInstructions: RecipeInstruction[];
 }
 
+export interface RecipeUpdateBody {
+  name: string;
+  description: string;
+  recipeServings: number;
+  prepTime: string | null;
+  cookTime: string | null;
+  totalTime: string | null;
+  // Untouched lines are sent back as the exact original object (preserving
+  // structured quantity/unit/food or instruction title); only new/edited
+  // lines are the flattened plain-text shape.
+  recipeIngredient: (RecipeIngredient | { note: string })[];
+  recipeInstructions: (RecipeInstruction | { text: string })[];
+}
+
 export interface GeneratedRecipe {
   name: string;
   description: string;
@@ -102,11 +116,19 @@ export interface GeneratedRecipe {
   instructions: string[];
 }
 
-export interface GenerateRecipeResult {
-  recipe: GeneratedRecipe;
+export interface GenerateImageResult {
   imageBase64: string | null;
   imageMime: string | null;
   imageError: string | null;
+}
+
+export interface PanelConfig {
+  // Master switch: false hides every AI entry point in the UI entirely.
+  aiEnabled: boolean;
+  // Whether an AI Task entity has actually been picked yet. AI entry points
+  // stay visible even when this is false (to nudge setup) — they just show
+  // a "needs configuring" message instead of the real generate/import UI.
+  aiConfigured: boolean;
 }
 
 export interface PaginatedResponse<T> {

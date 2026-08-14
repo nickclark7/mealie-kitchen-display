@@ -18,6 +18,7 @@ from homeassistant.helpers.network import get_url
 
 from .const import (
     API_URL_BASE,
+    CONF_AI_ENABLED,
     CONF_AI_IMAGE_ENTITY,
     CONF_AI_TEXT_ENTITY,
     CONF_MEALIE_TOKEN,
@@ -60,6 +61,15 @@ class MealieProxyView(HomeAssistantView):
         if not entries:
             return {}
         return entries[0].options
+
+    def _require_ai_enabled(self) -> None:
+        # Defense-in-depth: the frontend already hides every AI entry point
+        # when this is off, but the API itself should refuse too in case
+        # something still calls it directly.
+        if not self._entry_options().get(CONF_AI_ENABLED, True):
+            raise web.HTTPForbidden(
+                reason="AI recipe features are disabled — enable them in this integration's options"
+            )
 
     async def _mealie_get(self, path: str, *, params: dict | None = None, binary: bool = False):
         data = self._entry_data()
@@ -164,13 +174,21 @@ class MealieProxyView(HomeAssistantView):
             cache["user_id"] = me["id"]
         return cache["user_id"]
 
-    async def _generate_image(self, entity_id: str, subject: str) -> tuple[str | None, str | None]:
+    async def _generate_image(
+        self, entity_id: str, subject: str, guidance: str | None = None
+    ) -> tuple[str | None, str | None]:
+        instructions = f"An appetizing, realistic photo of: {subject}"
+        if guidance:
+            # User-supplied detail on a regenerate — appended rather than
+            # replacing the base instructions, since repeating the exact same
+            # prompt tends to get a near-identical image back from the model.
+            instructions += f". Additional guidance: {guidance}"
         result = await self.hass.services.async_call(
             "ai_task",
             "generate_image",
             {
                 "task_name": "Generate recipe image",
-                "instructions": f"An appetizing, realistic photo of: {subject}",
+                "instructions": instructions,
                 "entity_id": entity_id,
             },
             blocking=True,
@@ -233,6 +251,26 @@ class MealieProxyView(HomeAssistantView):
 
         await self.hass.async_add_executor_job(_remove)
 
+    async def _upload_recipe_image(self, slug: str, image_bytes: bytes, extension: str) -> None:
+        data = self._entry_data()
+        if data is None:
+            return
+        form = aiohttp.FormData()
+        form.add_field("image", image_bytes, filename=f"image.{extension}", content_type=f"image/{extension}")
+        form.add_field("extension", extension)
+        session = async_get_clientsession(self.hass)
+        try:
+            async with session.put(
+                f"{data[CONF_URL]}/api/recipes/{slug}/image",
+                data=form,
+                headers={"Authorization": f"Bearer {data[CONF_MEALIE_TOKEN]}"},
+                timeout=aiohttp.ClientTimeout(total=20),
+            ) as resp:
+                if resp.status not in (200, 201):
+                    _LOGGER.warning("Mealie rejected recipe image upload: HTTP %s", resp.status)
+        except aiohttp.ClientError as err:
+            _LOGGER.warning("Error uploading recipe image to Mealie: %s", err)
+
 
 class MealieRecipesView(MealieProxyView):
     url = f"{API_URL_BASE}/recipes"
@@ -268,6 +306,32 @@ class MealieRecipeDetailView(MealieProxyView):
     async def delete(self, request: web.Request, slug: str) -> web.Response:
         await self._mealie_write("DELETE", f"/api/recipes/{slug}")
         return web.json_response({"deleted": True})
+
+    async def post(self, request: web.Request, slug: str) -> web.Response:
+        body = await request.json()
+        name = (body.get("name") or "").strip()
+        if not name:
+            raise web.HTTPBadRequest(reason="name is required")
+
+        # Fetch-then-merge the full recipe, not a small patch_body: Mealie's
+        # PATCH behaves like a whole-object replacement for schema fields
+        # present in the body, so omitting fields this editor doesn't expose
+        # (recipeYield, tools, rating, orgURL, ...) would silently wipe them
+        # rather than leave them alone — same class of gotcha as the
+        # tags-array PATCH elsewhere in this file, just at the whole-recipe
+        # level instead of one field.
+        current = await self._mealie_get(f"/api/recipes/{slug}")
+        current["name"] = name
+        current["description"] = body.get("description", "")
+        current["recipeServings"] = body.get("recipeServings") or 1
+        current["prepTime"] = body.get("prepTime") or None
+        current["cookTime"] = body.get("cookTime") or None
+        current["totalTime"] = body.get("totalTime") or None
+        current["recipeIngredient"] = body.get("recipeIngredient", [])
+        current["recipeInstructions"] = body.get("recipeInstructions", [])
+
+        updated = await self._mealie_write("PATCH", f"/api/recipes/{slug}", json_body=current)
+        return web.json_response(updated if isinstance(updated, dict) else {})
 
 
 class MealieRandomRecipeView(MealieProxyView):
@@ -409,6 +473,28 @@ class MealieMyRecipeView(MealieProxyView):
         return web.json_response({"my_recipe": want})
 
 
+class MealiePanelConfigView(MealieProxyView):
+    """Tells the frontend whether/how to show the AI features.
+
+    Checked proactively (rather than just surfacing errors after the fact)
+    so the panel can show a clear "needs configuring" message in place of the
+    AI screens instead of a failed API call, while still letting a master
+    ai_enabled=false hide those entry points entirely.
+    """
+
+    url = f"{API_URL_BASE}/config"
+    name = f"api:{DOMAIN}:panel_config"
+
+    async def get(self, request: web.Request) -> web.Response:
+        options = self._entry_options()
+        return web.json_response(
+            {
+                "aiEnabled": bool(options.get(CONF_AI_ENABLED, True)),
+                "aiConfigured": bool(options.get(CONF_AI_TEXT_ENTITY)),
+            }
+        )
+
+
 _AI_RECIPE_STRUCTURE = {
     "name": {"selector": {"text": {}}},
     "description": {"selector": {"text": {}}},
@@ -422,17 +508,20 @@ _AI_RECIPE_STRUCTURE = {
 
 
 class MealieGenerateRecipeView(MealieProxyView):
-    """Ask a user-configured ai_task entity for a recipe, and optionally an image.
+    """Ask a user-configured ai_task entity for a recipe.
 
     Nothing is written to Mealie here — this is a preview. Saving is a
     separate step (MealieSaveRecipeView) so the user can review/regenerate
-    first.
+    first. Image generation is a separate request too (MealieGenerateRecipeImageView)
+    — it's much slower than text generation, and splitting it out lets the
+    frontend show the recipe text immediately instead of blocking on the photo.
     """
 
     url = f"{API_URL_BASE}/ai/generate-recipe"
     name = f"api:{DOMAIN}:ai_generate_recipe"
 
     async def post(self, request: web.Request) -> web.Response:
+        self._require_ai_enabled()
         options = self._entry_options()
         text_entity = options.get(CONF_AI_TEXT_ENTITY)
         if not text_entity:
@@ -468,28 +557,7 @@ class MealieGenerateRecipeView(MealieProxyView):
             raise web.HTTPBadGateway(reason=f"AI recipe generation failed: {err}") from err
 
         recipe = result.get("data", result) if isinstance(result, dict) else result
-
-        image_base64 = None
-        image_mime = None
-        image_error = None
-        image_entity = options.get(CONF_AI_IMAGE_ENTITY)
-        if bool(body.get("generateImage")) and image_entity:
-            try:
-                image_base64, image_mime = await self._generate_image(
-                    image_entity, recipe.get("name") or prompt
-                )
-            except HomeAssistantError as err:
-                _LOGGER.warning("AI image generation failed: %s", err)
-                image_error = str(err)
-
-        return web.json_response(
-            {
-                "recipe": recipe,
-                "imageBase64": image_base64,
-                "imageMime": image_mime,
-                "imageError": image_error,
-            }
-        )
+        return web.json_response({"recipe": recipe})
 
 
 class MealieImportRecipeView(MealieProxyView):
@@ -504,6 +572,7 @@ class MealieImportRecipeView(MealieProxyView):
     name = f"api:{DOMAIN}:ai_import_recipe"
 
     async def post(self, request: web.Request) -> web.Response:
+        self._require_ai_enabled()
         options = self._entry_options()
         text_entity = options.get(CONF_AI_TEXT_ENTITY)
         if not text_entity:
@@ -564,27 +633,46 @@ class MealieImportRecipeView(MealieProxyView):
                 await self._delete_attachment(attachment_path)
 
         recipe = result.get("data", result) if isinstance(result, dict) else result
+        return web.json_response({"recipe": recipe})
 
-        image_out_base64 = None
-        image_out_mime = None
-        image_error = None
+
+class MealieGenerateRecipeImageView(MealieProxyView):
+    """Generate a photo for an already-generated/imported recipe.
+
+    Split out from MealieGenerateRecipeView/MealieImportRecipeView so the
+    frontend can show the recipe text as soon as it's ready rather than
+    waiting on the (much slower) image call too. If no image entity is
+    configured this is a no-op success (matches the previous behavior of
+    silently skipping image generation), not an error.
+    """
+
+    url = f"{API_URL_BASE}/ai/generate-recipe-image"
+    name = f"api:{DOMAIN}:ai_generate_recipe_image"
+
+    async def post(self, request: web.Request) -> web.Response:
+        self._require_ai_enabled()
+        options = self._entry_options()
         image_entity = options.get(CONF_AI_IMAGE_ENTITY)
-        if bool(body.get("generateImage")) and image_entity:
-            try:
-                image_out_base64, image_out_mime = await self._generate_image(
-                    image_entity, recipe.get("name") or text or "this recipe"
-                )
-            except HomeAssistantError as err:
-                _LOGGER.warning("AI image generation failed: %s", err)
-                image_error = str(err)
+        if not image_entity:
+            return web.json_response({"imageBase64": None, "imageMime": None, "imageError": None})
+
+        body = await request.json()
+        subject = (body.get("subject") or "").strip()
+        guidance = (body.get("guidance") or "").strip() or None
+        if not subject:
+            raise web.HTTPBadRequest(reason="subject is required")
+
+        image_base64 = None
+        image_mime = None
+        image_error = None
+        try:
+            image_base64, image_mime = await self._generate_image(image_entity, subject, guidance)
+        except HomeAssistantError as err:
+            _LOGGER.warning("AI image generation failed: %s", err)
+            image_error = str(err)
 
         return web.json_response(
-            {
-                "recipe": recipe,
-                "imageBase64": image_out_base64,
-                "imageMime": image_out_mime,
-                "imageError": image_error,
-            }
+            {"imageBase64": image_base64, "imageMime": image_mime, "imageError": image_error}
         )
 
 
@@ -595,6 +683,7 @@ class MealieSaveRecipeView(MealieProxyView):
     name = f"api:{DOMAIN}:ai_save_recipe"
 
     async def post(self, request: web.Request) -> web.Response:
+        self._require_ai_enabled()
         body = await request.json()
         recipe = body.get("recipe") or {}
         name = (recipe.get("name") or "").strip()
@@ -620,6 +709,11 @@ class MealieSaveRecipeView(MealieProxyView):
         }
         await self._mealie_write("PATCH", f"/api/recipes/{slug}", json_body=patch_body)
 
+        # AI-generated/imported recipes are tagged "My Recipe" like anything
+        # else added through this app — same tag+cookbook auto-create path
+        # MealieMyRecipeView already uses for the manual toggle.
+        await self._set_tag_state(slug, MY_RECIPE_TAG_NAME, True, MY_RECIPES_COOKBOOK_NAME)
+
         image_base64 = body.get("imageBase64")
         if image_base64:
             mime = body.get("imageMime") or "image/png"
@@ -633,25 +727,33 @@ class MealieSaveRecipeView(MealieProxyView):
 
         return web.json_response({"slug": slug})
 
-    async def _upload_recipe_image(self, slug: str, image_bytes: bytes, extension: str) -> None:
-        data = self._entry_data()
-        if data is None:
-            return
-        form = aiohttp.FormData()
-        form.add_field("image", image_bytes, filename=f"image.{extension}", content_type=f"image/{extension}")
-        form.add_field("extension", extension)
-        session = async_get_clientsession(self.hass)
+
+class MealieRecipeAiImageView(MealieProxyView):
+    """Attach an AI-generated photo to an already-saved recipe.
+
+    Used when the user saves a recipe before its (much slower) background
+    image finishes generating — the frontend calls this once the image
+    resolves, so saving never has to block on it and the user can move on
+    to their next recipe in the meantime.
+    """
+
+    url = f"{API_URL_BASE}/recipes/{{slug}}/ai-image"
+    name = f"api:{DOMAIN}:recipe_ai_image"
+
+    async def post(self, request: web.Request, slug: str) -> web.Response:
+        self._require_ai_enabled()
+        body = await request.json()
+        image_base64 = body.get("imageBase64")
+        if not image_base64:
+            raise web.HTTPBadRequest(reason="imageBase64 is required")
+        mime = body.get("imageMime") or "image/png"
+        extension = mime.split("/")[-1] if "/" in mime else "png"
         try:
-            async with session.put(
-                f"{data[CONF_URL]}/api/recipes/{slug}/image",
-                data=form,
-                headers={"Authorization": f"Bearer {data[CONF_MEALIE_TOKEN]}"},
-                timeout=aiohttp.ClientTimeout(total=20),
-            ) as resp:
-                if resp.status not in (200, 201):
-                    _LOGGER.warning("Mealie rejected recipe image upload: HTTP %s", resp.status)
-        except aiohttp.ClientError as err:
-            _LOGGER.warning("Error uploading recipe image to Mealie: %s", err)
+            image_bytes = base64.b64decode(image_base64)
+        except (ValueError, TypeError) as err:
+            raise web.HTTPBadRequest(reason="Could not decode image") from err
+        await self._upload_recipe_image(slug, image_bytes, extension)
+        return web.json_response({"slug": slug})
 
 
 class MealieMealplanView(MealieProxyView):
@@ -747,9 +849,12 @@ VIEWS = (
     MealieRecipeDetailView,
     MealieFavoriteView,
     MealieMyRecipeView,
+    MealiePanelConfigView,
     MealieGenerateRecipeView,
+    MealieGenerateRecipeImageView,
     MealieImportRecipeView,
     MealieSaveRecipeView,
+    MealieRecipeAiImageView,
     MealieMealplanView,
     MealieLastMadeView,
     MealieShoppingListsView,
