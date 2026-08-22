@@ -61,12 +61,14 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
 - Browse and search recipes, with a cookbook filter
 - Full recipe detail view: ingredients (with a shopping-list-style checklist), and a step-by-step "cooking mode" that ticks off each instruction as you go
 - Favorite recipes (syncs with Mealie's own native favorites) and a "My Recipe" tag, each with an auto-created cookbook so they're easy to browse back to
-- Add a recipe to Mealie's meal plan (date + meal type), and a full week calendar view of your plan
+- Add a recipe to Mealie's meal plan (date + meal type), and a rolling 7-day view of your plan starting today
+- Add a **freeform meal plan entry** with no recipe attached (e.g. "Leftovers", "Eating out"), and remove any entry — recipe-linked or freeform — with confirmation
 - Mark a recipe as made, recording the date in Mealie
 - Add selected ingredients to a Mealie shopping list (or create a new one), plus a dedicated shopping list view with checkable items and list deletion
 - "Surprise me" random recipe picker — all recipes, your recipes, favorites, or something you've made before
 - Delete a recipe, with confirmation
 - A matching Lovelace launcher card, so the panel can also be opened from any dashboard
+- **A configurable dashboard card** with its own visual editor — meal plan, random recipes, a "surprise me" picker, the AI recipe generator, or recipe search, each launching straight into the full panel — see [Dashboard Card](#dashboard-card) below
 - **AI recipe finder**: generate a recipe from a text description, or import one from a photo and/or pasted text, using your own Home Assistant `ai_task.*` entities — see [AI Recipe Finder](#ai-recipe-finder) below
 - AI tasks can be disabled and removed form the interface for those who dont want that capability
 
@@ -90,11 +92,25 @@ You'll need:
 - Your Mealie instance URL (e.g. `http://192.168.1.50:9000`)
 - An API token (Mealie → user menu → Settings → **API Tokens**)
 
-Once added, a **Recipes** entry appears in the sidebar automatically — no further configuration needed. A **Mealie Recipe Launcher** card is also available to add to any dashboard.
+Once added, a **Recipes** entry appears in the sidebar automatically — no further configuration needed. Two Lovelace cards are also available to add to any dashboard: the **Mealie Recipe Launcher** (opens the full panel), and the **Mealie Recipe Card** — see [Dashboard Card](#dashboard-card) below.
 
 ### Shopping lists and Home Assistant's native `todo` entities
 
 This add-on writes shopping list items directly to Mealie — that part needs nothing else. If you'd also like those lists to show up as Home Assistant `todo.*` entities (for voice assistant, other shopping-list cards, etc.), add Home Assistant's separate **core Mealie integration** (Settings → Devices & Services → Add Integration → search "Mealie") — it mirrors each Mealie shopping list to a `todo` entity, kept in sync in both directions. That's a different, official integration that ships with Home Assistant; this add-on doesn't duplicate that syncing itself.
+
+## Dashboard Card
+
+Add **Mealie Recipe Card** (`custom:mealie-dashboard-card`) to any dashboard — it has its own visual editor (mode dropdown, title, and mode-specific options), so YAML isn't required. Each card instance shows one mode:
+
+| Mode | What it shows |
+|---|---|
+| `mealplan` | A rolling meal-plan window starting today. Options: **Number of days** (1–14, default 7), **Show recipe thumbnails** (photo tiles instead of text chips). Includes the same "+ Add" freeform entry and "✕" remove-with-confirm affordances as the full panel. |
+| `random` | A shuffleable grid of random recipes. Options: **Number of recipes**, **Recipe pool** (all / your recipes / favorites / made before). |
+| `random-finder` | A "🎲 Surprise Me" button with a pool selector — one pick at a time, with a "Try Again" reroll. |
+| `ai-generate` | A prompt box; submitting launches the full panel with that prompt prefilled and generation already underway. Shows the same "needs configuring" / "disabled" messaging as the panel if AI isn't set up. |
+| `search` | Live recipe search, with an AI "Generate '\<query\>' recipe with AI" card and a "See all results in app" link. |
+
+Selecting a recipe from any mode (a meal-plan entry, a random tile, a search result) opens the full panel straight to that recipe. Every mode also accepts a **Panel path** option, only needed if the panel's been registered under a non-default URL.
 
 ## AI Recipe Finder
 

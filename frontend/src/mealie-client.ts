@@ -87,6 +87,16 @@ export class MealieClient {
     return this.hass.callApi("POST", `mealie_recipe_panel/mealplans`, { recipeId, date, entryType });
   }
 
+  // No recipe attached — just a plain note on the plan (e.g. "Leftovers",
+  // "Eating out"), which Mealie supports natively.
+  async addFreeformMealplanEntry(date: string, entryType: PlanEntryType, title: string): Promise<unknown> {
+    return this.hass.callApi("POST", `mealie_recipe_panel/mealplans`, { date, entryType, title });
+  }
+
+  async deleteMealplanEntry(entryId: number): Promise<unknown> {
+    return this.hass.callApi("DELETE", `mealie_recipe_panel/mealplans/${entryId}`);
+  }
+
   async setLastMade(slug: string, date: string): Promise<unknown> {
     return this.hass.callApi("PUT", `mealie_recipe_panel/recipes/${slug}/last-made`, { date });
   }
@@ -112,6 +122,16 @@ export class MealieClient {
 
   async getRandomRecipe(mode: RandomMode): Promise<{ recipe: RecipeSummary | null }> {
     return this.hass.callApi("GET", `mealie_recipe_panel/recipes/random?mode=${mode}`);
+  }
+
+  // Fetches all N in a single request (one page, already distinct) instead
+  // of N separate random picks — much faster than looping getRandomRecipe.
+  async getRandomRecipes(mode: RandomMode, count: number): Promise<RecipeSummary[]> {
+    const { recipes } = await this.hass.callApi<{ recipes: RecipeSummary[] }>(
+      "GET",
+      `mealie_recipe_panel/recipes/random?mode=${mode}&count=${count}`
+    );
+    return recipes;
   }
 
   async deleteRecipe(slug: string): Promise<unknown> {

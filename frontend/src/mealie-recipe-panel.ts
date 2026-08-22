@@ -32,7 +32,7 @@ import "./components/confirm-dialog";
 import "./components/shopping-view";
 import "./components/ai-recipe-view";
 import "./components/ai-recipe-preview";
-import { addDaysLocal, mondayOfLocal, todayLocal } from "./date-utils";
+import { addDaysLocal, todayLocal } from "./date-utils";
 
 function withTag(tags: RecipeTag[], tagName: string, present: boolean): RecipeTag[] {
   const has = tags.some((t) => t.name.toLowerCase() === tagName.toLowerCase());
@@ -69,9 +69,12 @@ export class MealieRecipePanel extends LitElement {
   @state() private pendingShoppingItems: string[] = [];
   @state() private showMealplanView = false;
   @state() private cameFromMealplan = false;
-  @state() private weekStart = mondayOfLocal(todayLocal());
+  // Rolling 7-day window starting today, not the calendar week — no point
+  // showing days that have already passed.
+  @state() private weekStart = todayLocal();
   @state() private mealplanEntries: MealPlanEntry[] = [];
   @state() private mealplanLoading = false;
+  @state() private pendingDeleteMealplanEntry: MealPlanEntry | null = null;
   @state() private showRandomPicker = false;
   @state() private showDeleteConfirm = false;
   @state() private showShoppingView = false;
@@ -109,7 +112,33 @@ export class MealieRecipePanel extends LitElement {
       this.client = new MealieClient(this.hass);
       this.loadRecipes();
       this.loadCookbooks();
-      this.loadConfig();
+      this.loadConfig().then(() => this.handleDeepLink());
+    }
+  }
+
+  // Lets dashboard cards (mealie-dashboard-card) hand off straight to a
+  // specific recipe or a prefilled AI prompt via the panel's own URL, e.g.
+  // "/mealie-recipes?recipe=some-slug" or "?ai_prompt=thick+crispy+pizza+dough".
+  // The query string is stripped immediately so refresh/back doesn't repeat it.
+  private handleDeepLink() {
+    const params = new URLSearchParams(location.search);
+    const recipeSlug = params.get("recipe");
+    const aiPrompt = params.get("ai_prompt");
+    const search = params.get("search");
+    if (!recipeSlug && !aiPrompt && !search) return;
+    history.replaceState(null, "", location.pathname);
+
+    if (recipeSlug) {
+      this.openRecipe(recipeSlug);
+    } else if (aiPrompt) {
+      this.aiPrompt = aiPrompt;
+      this.openAiView();
+      if (this.panelConfig.aiConfigured) {
+        this.onAiGenerate();
+      }
+    } else if (search) {
+      this.searchQuery = search;
+      this.loadRecipes(search);
     }
   }
 
@@ -233,7 +262,7 @@ export class MealieRecipePanel extends LitElement {
   }
 
   private goToCurrentWeek() {
-    this.weekStart = mondayOfLocal(todayLocal());
+    this.weekStart = todayLocal();
     this.loadMealplanWeek();
   }
 
@@ -290,6 +319,32 @@ export class MealieRecipePanel extends LitElement {
       this.error = await describeError(err, "Failed to add to meal plan");
     }
     this.showMealplanDialog = false;
+  }
+
+  private async onFreeformAdd(e: CustomEvent<{ date: string; entryType: PlanEntryType; title: string }>) {
+    if (!this.client) return;
+    try {
+      await this.client.addFreeformMealplanEntry(e.detail.date, e.detail.entryType, e.detail.title);
+      this.loadMealplanWeek();
+    } catch (err) {
+      this.error = await describeError(err, "Failed to add to meal plan");
+    }
+  }
+
+  private onRequestDeleteMealplanEntry(entry: MealPlanEntry) {
+    this.pendingDeleteMealplanEntry = entry;
+  }
+
+  private async onConfirmDeleteMealplanEntry() {
+    if (!this.client || !this.pendingDeleteMealplanEntry) return;
+    const entry = this.pendingDeleteMealplanEntry;
+    this.pendingDeleteMealplanEntry = null;
+    try {
+      await this.client.deleteMealplanEntry(entry.id);
+      this.mealplanEntries = this.mealplanEntries.filter((e) => e.id !== entry.id);
+    } catch (err) {
+      this.error = await describeError(err, "Failed to remove meal plan entry");
+    }
   }
 
   private async onLastmadeConfirm(e: CustomEvent<{ date: string }>) {
@@ -660,8 +715,23 @@ export class MealieRecipePanel extends LitElement {
             @next-week=${() => this.changeWeek(7)}
             @today=${() => this.goToCurrentWeek()}
             @recipe-select=${(e: CustomEvent<{ slug: string }>) => this.openRecipe(e.detail.slug, true)}
+            @freeform-add=${(e: CustomEvent<{ date: string; entryType: PlanEntryType; title: string }>) =>
+              this.onFreeformAdd(e)}
+            @delete-entry=${(e: CustomEvent<{ entry: MealPlanEntry }>) =>
+              this.onRequestDeleteMealplanEntry(e.detail.entry)}
           ></mealplan-view>
         </panel-shell>
+        <confirm-dialog
+          .open=${!!this.pendingDeleteMealplanEntry}
+          heading="Remove from meal plan?"
+          message=${`"${
+            this.pendingDeleteMealplanEntry?.recipe?.name ?? this.pendingDeleteMealplanEntry?.title ?? "This item"
+          }" will be removed from the meal plan.`}
+          confirmLabel="Remove"
+          destructive
+          @confirm=${() => this.onConfirmDeleteMealplanEntry()}
+          @cancel=${() => (this.pendingDeleteMealplanEntry = null)}
+        ></confirm-dialog>
       `;
     }
 

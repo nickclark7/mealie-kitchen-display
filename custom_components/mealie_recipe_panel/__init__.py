@@ -48,10 +48,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             embed_iframe=False,
             require_admin=False,
         )
-        # Makes the mealie-launcher-card custom element available on every
-        # dashboard automatically, without the user manually adding a
-        # Lovelace resource.
+        # Makes the mealie-launcher-card and mealie-dashboard-card custom
+        # elements available on every dashboard automatically, without the
+        # user manually adding a Lovelace resource.
         add_extra_js_url(hass, await _versioned_url(hass, "mealie-launcher-card.js"))
+        add_extra_js_url(hass, await _versioned_url(hass, "mealie-dashboard-card.js"))
         hass.data[DOMAIN]["_views_registered"] = True
 
     return True

@@ -18,9 +18,3 @@ export function addDaysLocal(iso: string, days: number): string {
   d.setDate(d.getDate() + days);
   return toLocalDateString(d);
 }
-
-export function mondayOfLocal(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  const day = d.getDay();
-  return addDaysLocal(iso, day === 0 ? -6 : 1 - day);
-}

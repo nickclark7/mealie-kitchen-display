@@ -5,7 +5,7 @@ import * as esbuild from "esbuild-wasm";
 await esbuild.initialize({});
 
 const result = await esbuild.build({
-  entryPoints: ["src/mealie-recipe-panel.ts", "src/mealie-launcher-card.ts"],
+  entryPoints: ["src/mealie-recipe-panel.ts", "src/mealie-launcher-card.ts", "src/mealie-dashboard-card.ts"],
   bundle: true,
   format: "esm",
   target: "es2021",

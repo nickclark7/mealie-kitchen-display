@@ -140,7 +140,7 @@ export class RecipeGrid extends LitElement {
     return html`
       <button class="card ai-card" @click=${() => this.onAiGenerateFromSearch()}>
         <span class="icon">✨</span>
-        <span>Generate "${this.searchQuery.trim()}" with AI</span>
+        <span>Generate "${this.searchQuery.trim()}" recipe with AI</span>
       </button>
     `;
   }

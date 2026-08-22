@@ -343,23 +343,42 @@ class MealieRandomRecipeView(MealieProxyView):
         if mode not in _RANDOM_MODES:
             raise web.HTTPBadRequest(reason="Invalid mode")
 
+        # count is opt-in and keeps the single-recipe response shape (used by
+        # the "surprise me" picker) unchanged for existing callers. A grid of
+        # N recipes asks for N here in one round trip instead of N separate
+        # random picks — each pick previously re-sorted the whole recipe
+        # table server-side, so N parallel picks was N times the work for
+        # what a single perPage=N page already returns in one shot.
+        count_param = request.query.get("count")
+        count = 1
+        if count_param is not None:
+            try:
+                count = max(1, min(int(count_param), 20))
+            except ValueError:
+                raise web.HTTPBadRequest(reason="count must be an integer")
+
         if mode == "made-before":
             data = await self._mealie_get("/api/recipes", params={"perPage": "500"})
             candidates = [r for r in data["items"] if r.get("lastMade")]
-            recipe = random.choice(candidates) if candidates else None
-            return web.json_response({"recipe": recipe})
+            random.shuffle(candidates)
+            recipes = candidates[:count]
+            if count_param is None:
+                return web.json_response({"recipe": recipes[0] if recipes else None})
+            return web.json_response({"recipes": recipes})
 
-        params = {"orderBy": "random", "paginationSeed": uuid.uuid4().hex, "perPage": "1", "page": "1"}
+        params = {"orderBy": "random", "paginationSeed": uuid.uuid4().hex, "perPage": str(count), "page": "1"}
         if mode in ("my-recipes", "favorites"):
             cookbook_name = MY_RECIPES_COOKBOOK_NAME if mode == "my-recipes" else FAVORITES_COOKBOOK_NAME
             cookbook_id = await self._find_cookbook_id(cookbook_name)
             if not cookbook_id:
-                return web.json_response({"recipe": None})
+                return web.json_response({"recipe": None} if count_param is None else {"recipes": []})
             params["cookbook"] = cookbook_id
 
         data = await self._mealie_get("/api/recipes", params=params)
-        recipe = data["items"][0] if data["items"] else None
-        return web.json_response({"recipe": recipe})
+        if count_param is None:
+            recipe = data["items"][0] if data["items"] else None
+            return web.json_response({"recipe": recipe})
+        return web.json_response({"recipes": data["items"]})
 
 
 class MealieFavoriteView(MealieProxyView):
@@ -776,21 +795,38 @@ class MealieMealplanView(MealieProxyView):
         entry_type = body.get("entryType", "dinner")
         if entry_type not in _VALID_ENTRY_TYPES:
             raise web.HTTPBadRequest(reason="Invalid entryType")
-        if not body.get("date") or not body.get("recipeId"):
-            raise web.HTTPBadRequest(reason="date and recipeId are required")
+        if not body.get("date"):
+            raise web.HTTPBadRequest(reason="date is required")
 
-        data = await self._mealie_write(
-            "POST",
-            "/api/households/mealplans",
-            json_body={
-                "date": body["date"],
-                "entryType": entry_type,
-                "recipeId": body["recipeId"],
-                "title": "",
-                "text": "",
-            },
-        )
+        # A recipeId links the entry to a real recipe, same as before. Without
+        # one, a non-empty title is required instead — Mealie itself supports
+        # these "freeform" entries natively (no recipe, just a plain note like
+        # "Leftovers" or "Eating out"), this proxy just didn't expose it.
+        recipe_id = body.get("recipeId")
+        title = (body.get("title") or "").strip()
+        if not recipe_id and not title:
+            raise web.HTTPBadRequest(reason="Either recipeId or title is required")
+
+        json_body = {
+            "date": body["date"],
+            "entryType": entry_type,
+            "title": title,
+            "text": "",
+        }
+        if recipe_id:
+            json_body["recipeId"] = recipe_id
+
+        data = await self._mealie_write("POST", "/api/households/mealplans", json_body=json_body)
         return web.json_response(data)
+
+
+class MealieMealplanEntryView(MealieProxyView):
+    url = f"{API_URL_BASE}/mealplans/{{entry_id}}"
+    name = f"api:{DOMAIN}:mealplan_entry"
+
+    async def delete(self, request: web.Request, entry_id: str) -> web.Response:
+        await self._mealie_write("DELETE", f"/api/households/mealplans/{entry_id}")
+        return web.json_response({})
 
 
 class MealieCategoriesView(MealieProxyView):
@@ -856,6 +892,7 @@ VIEWS = (
     MealieSaveRecipeView,
     MealieRecipeAiImageView,
     MealieMealplanView,
+    MealieMealplanEntryView,
     MealieLastMadeView,
     MealieShoppingListsView,
     MealieShoppingListDetailView,
