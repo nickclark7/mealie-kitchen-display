@@ -1,7 +1,13 @@
 import { LitElement, html, css } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { property } from "lit/decorators.js";
 
-@customElement("confirm-dialog")
+// Bundled independently into both mealie-dashboard-card.js and
+// mealie-recipe-panel.js, and both load on every page (the former via
+// add_extra_js_url, the latter also globally since it's a duplicate module).
+// Registering unconditionally via @customElement would throw
+// "NotSupportedError: already used with this registry" whichever bundle's
+// script tag happens to evaluate second, aborting that entire module -
+// including its own unrelated custom element definitions further down.
 export class ConfirmDialog extends LitElement {
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: String }) heading = "Are you sure?";
@@ -85,4 +91,8 @@ export class ConfirmDialog extends LitElement {
       </div>
     `;
   }
+}
+
+if (!customElements.get("confirm-dialog")) {
+  customElements.define("confirm-dialog", ConfirmDialog);
 }

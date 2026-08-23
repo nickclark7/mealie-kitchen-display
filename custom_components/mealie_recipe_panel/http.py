@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import logging
 import os
+import pathlib
 import random
 import uuid
 
@@ -23,10 +25,12 @@ from .const import (
     CONF_AI_TEXT_ENTITY,
     CONF_MEALIE_TOKEN,
     DOMAIN,
+    STATIC_URL_BASE,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
+_WWW_DIR = pathlib.Path(__file__).parent / "www"
 _IMPORT_MEDIA_SUBDIR = "mealie_recipe_panel"
 _ALLOWED_IMAGE_SIZES = {"tiny-original", "min-original", "original"}
 _VALID_ENTRY_TYPES = {"breakfast", "lunch", "dinner", "side", "snack", "drink", "dessert"}
@@ -775,6 +779,29 @@ class MealieRecipeAiImageView(MealieProxyView):
         return web.json_response({"slug": slug})
 
 
+class MealiePanelAssetView(MealieProxyView):
+    """Fresh, content-hashed URL for the full panel's JS bundle.
+
+    Used by the launcher card to lazy-load mealie-recipe-panel.js on demand
+    when opening it as an in-page overlay instead of navigating to the panel
+    route (where panel_custom would normally supply this URL itself). The
+    hash is recomputed from the file on disk on every call, so the returned
+    URL is always safe to cache forever — even if the launcher card's own JS
+    is momentarily stale (e.g. HA's frontend service worker), this endpoint
+    always points at the current build.
+    """
+
+    url = f"{API_URL_BASE}/panel-asset-url"
+    name = f"api:{DOMAIN}:panel_asset_url"
+
+    async def get(self, request: web.Request) -> web.Response:
+        def _hash() -> str:
+            return hashlib.sha256((_WWW_DIR / "mealie-recipe-panel.js").read_bytes()).hexdigest()[:10]
+
+        digest = await self.hass.async_add_executor_job(_hash)
+        return web.json_response({"url": f"{STATIC_URL_BASE}/mealie-recipe-panel.js?v={digest}"})
+
+
 class MealieMealplanView(MealieProxyView):
     url = f"{API_URL_BASE}/mealplans"
     name = f"api:{DOMAIN}:mealplans"
@@ -866,13 +893,25 @@ class MealieImageView(MealieProxyView):
     url = f"{API_URL_BASE}/image/{{recipe_id}}/{{size}}"
     name = f"api:{DOMAIN}:image"
 
+    # Unlike the panel asset URL, this URL isn't content-hashed (the
+    # recipe_id/size in the path stay the same even if the photo is later
+    # replaced), so this is a bounded cache lifetime rather than "forever" —
+    # long enough to stop every dashboard card render from re-fetching every
+    # thumbnail through HA -> Mealie, short enough that a re-uploaded photo
+    # shows up within a day without needing a cache-busting scheme.
+    _CACHE_SECONDS = 86400
+
     async def get(self, request: web.Request, recipe_id: str, size: str) -> web.Response:
         if size not in _ALLOWED_IMAGE_SIZES:
             raise web.HTTPBadRequest(reason="Invalid image size")
         body, content_type = await self._mealie_get(
             f"/api/media/recipes/{recipe_id}/images/{size}.webp", binary=True
         )
-        return web.Response(body=body, content_type=content_type)
+        return web.Response(
+            body=body,
+            content_type=content_type,
+            headers={"Cache-Control": f"public, max-age={self._CACHE_SECONDS}"},
+        )
 
 
 VIEWS = (
@@ -891,6 +930,7 @@ VIEWS = (
     MealieImportRecipeView,
     MealieSaveRecipeView,
     MealieRecipeAiImageView,
+    MealiePanelAssetView,
     MealieMealplanView,
     MealieMealplanEntryView,
     MealieLastMadeView,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import pathlib
+from urllib.parse import quote
 
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
@@ -51,8 +52,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Makes the mealie-launcher-card and mealie-dashboard-card custom
         # elements available on every dashboard automatically, without the
         # user manually adding a Lovelace resource.
-        add_extra_js_url(hass, await _versioned_url(hass, "mealie-launcher-card.js"))
-        add_extra_js_url(hass, await _versioned_url(hass, "mealie-dashboard-card.js"))
+        #
+        # Routed through mealie-loader.js rather than pointed at directly:
+        # add_extra_js_url's own bare import() call has no timeout and can
+        # hang indefinitely on a stalled connection (seen in practice — no
+        # error, no recovery, customElements.define() never runs). The
+        # loader uses fetch()+AbortController instead, which can time out
+        # and retry. The real target URLs travel as query params since
+        # add_extra_js_url only lets us choose the URL to import, not the
+        # code doing the importing.
+        #
+        # That outer import() of the loader itself is still exposed to the
+        # same hang risk (just for a much smaller file, which measurably
+        # helped but didn't eliminate it in practice) — so it's registered
+        # twice, as two independent URLs, each carrying every card target.
+        # Either copy succeeding brings in every card; both would need to
+        # hang for the bug to resurface. The card modules guard their own
+        # customElements.define() so it's harmless if both copies succeed.
+        loader_url = await _versioned_url(hass, "mealie-loader.js")
+        launcher_url = await _versioned_url(hass, "mealie-launcher-card.js")
+        dashboard_url = await _versioned_url(hass, "mealie-dashboard-card.js")
+        targets = f"target={quote(launcher_url, safe='')}&target={quote(dashboard_url, safe='')}"
+        add_extra_js_url(hass, f"{loader_url}&copy=1&{targets}")
+        add_extra_js_url(hass, f"{loader_url}&copy=2&{targets}")
         hass.data[DOMAIN]["_views_registered"] = True
 
     return True

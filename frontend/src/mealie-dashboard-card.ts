@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 import { MealieClient, describeError } from "./mealie-client";
 import type { HomeAssistant, MealPlanEntry, PanelConfig, PlanEntryType, RandomMode, RecipeSummary } from "./types";
 import { addDaysLocal, todayLocal } from "./date-utils";
@@ -53,7 +53,6 @@ function formatShort(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-@customElement("mealie-dashboard-card")
 export class MealieDashboardCard extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
 
@@ -947,7 +946,6 @@ export class MealieDashboardCard extends LitElement {
 // ha-form — those are HA-internal elements not guaranteed stable across
 // versions, and this editor's needs (a handful of selects/inputs) don't
 // warrant the risk.
-@customElement("mealie-dashboard-card-editor")
 export class MealieDashboardCardEditor extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
   @state() private _config?: DashboardCardConfig;
@@ -1117,3 +1115,15 @@ window.customCards.push({
   description:
     "Meal plan, random recipes, AI recipe generator, surprise-me picker, or recipe search — pick a mode in the card config. Selecting a recipe opens it in the full Mealie panel.",
 });
+
+// mealie-loader.js is deliberately triggered as more than one independent
+// import() (see __init__.py) so that one hanging doesn't leave the card
+// unregistered — which means this module can genuinely be evaluated more
+// than once if multiple copies succeed. customElements.define() throws on a
+// second registration, so guard it like any other idempotent registration.
+if (!customElements.get("mealie-dashboard-card")) {
+  customElements.define("mealie-dashboard-card", MealieDashboardCard);
+}
+if (!customElements.get("mealie-dashboard-card-editor")) {
+  customElements.define("mealie-dashboard-card-editor", MealieDashboardCardEditor);
+}
