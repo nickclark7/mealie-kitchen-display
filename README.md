@@ -92,11 +92,27 @@ You'll need:
 - Your Mealie instance URL (e.g. `http://192.168.1.50:9000`)
 - An API token (Mealie → user menu → Settings → **API Tokens**)
 
-Once added, a **Recipes** entry appears in the sidebar automatically — no further configuration needed. Two Lovelace cards are also available to add to any dashboard: the **Mealie Recipe Launcher** (opens the full panel), and the **Mealie Recipe Card** — see [Dashboard Card](#dashboard-card) below.
+Once added, a **Recipes** entry appears in the sidebar automatically — no further configuration needed. Two Lovelace cards are also available to add to any dashboard: the **Mealie Recipe Launcher** (opens the full panel) — see [Launcher Card](#launcher-card) below — and the **Mealie Recipe Card** — see [Dashboard Card](#dashboard-card) below.
 
 ### Shopping lists and Home Assistant's native `todo` entities
 
 This add-on writes shopping list items directly to Mealie — that part needs nothing else. If you'd also like those lists to show up as Home Assistant `todo.*` entities (for voice assistant, other shopping-list cards, etc.), add Home Assistant's separate **core Mealie integration** (Settings → Devices & Services → Add Integration → search "Mealie") — it mirrors each Mealie shopping list to a `todo` entity, kept in sync in both directions. That's a different, official integration that ships with Home Assistant; this add-on doesn't duplicate that syncing itself.
+
+## Launcher Card
+
+Add **Mealie Recipe Launcher** (`custom:mealie-launcher-card`) to any dashboard — a single button that opens the full recipe panel. YAML-only for now (no visual editor):
+
+```yaml
+type: custom:mealie-launcher-card
+title: Recipes
+overlay: true
+```
+
+| Option | Default | What it does |
+|---|---|---|
+| `title` | `Recipes` | Label shown on the card. |
+| `panel_path` | `/mealie-recipes` | Only needed if the panel's been registered under a non-default URL. |
+| `overlay` | `false` | When `true`, opens the panel as a full-screen overlay on top of the current dashboard instead of navigating to it — a close button (✕) returns to exactly where it was launched from, with no navigation history entry added. When `false` (default), opening the panel navigates to it like any other page. |
 
 ## Dashboard Card
 
