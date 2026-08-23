@@ -100,7 +100,7 @@ This add-on writes shopping list items directly to Mealie — that part needs no
 
 ## Launcher Card
 
-Add **Mealie Recipe Launcher** (`custom:mealie-launcher-card`) to any dashboard — a single button that opens the full recipe panel. YAML-only for now (no visual editor):
+Add **Mealie Recipe Launcher** (`custom:mealie-launcher-card`) to any dashboard — a single button that opens the full recipe panel. Has its own visual editor (Title, Overlay, Panel path), or configure via YAML:
 
 ```yaml
 type: custom:mealie-launcher-card

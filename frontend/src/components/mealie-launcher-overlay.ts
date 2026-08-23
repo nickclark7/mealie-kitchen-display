@@ -83,7 +83,15 @@ export class MealieLauncherOverlay extends LitElement {
 
   private async loadPanel() {
     try {
-      await import(/* @vite-ignore */ this.panelJsUrl);
+      // Resolve to a fully-qualified URL before importing: this code can
+      // itself be running from a module the launcher card loaded via a
+      // blob: URL (mealie-loader.ts's fetch()+Blob+import() workaround for
+      // add_extra_js_url hangs), and a root-relative path like this one
+      // fails to resolve ("Failed to resolve module specifier") against a
+      // blob: base. window.location.href is always the real page URL
+      // regardless of what URL the calling module itself was loaded from.
+      const absoluteUrl = new URL(this.panelJsUrl, window.location.href).href;
+      await import(/* @vite-ignore */ absoluteUrl);
       const el = document.createElement("mealie-recipe-panel") as HTMLElement & {
         hass?: HomeAssistant;
         narrow?: boolean;

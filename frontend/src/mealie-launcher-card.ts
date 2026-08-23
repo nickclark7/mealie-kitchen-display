@@ -1,4 +1,4 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, html, css, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import type { HomeAssistant } from "./types";
 import "./components/mealie-launcher-overlay";
@@ -21,6 +21,14 @@ export class MealieLauncherCard extends LitElement {
 
   setConfig(config: LauncherCardConfig) {
     this.config = { panel_path: "/mealie-recipes", title: "Recipes", overlay: false, ...config };
+  }
+
+  static getStubConfig() {
+    return { title: "Recipes", overlay: false };
+  }
+
+  static getConfigElement() {
+    return document.createElement("mealie-launcher-card-editor");
   }
 
   getCardSize() {
@@ -84,6 +92,108 @@ export class MealieLauncherCard extends LitElement {
   }
 }
 
+// Home Assistant's card editor contract: setConfig()/hass in, a
+// "config-changed" CustomEvent out (bubbling, composed) carrying the full
+// updated config. Lovelace's "Edit Card" dialog instantiates this via
+// MealieLauncherCard.getConfigElement() and re-renders the card preview on
+// every event. Matches MealieDashboardCardEditor's structure/styling in
+// mealie-dashboard-card.ts for consistency between the two cards' editors.
+export class MealieLauncherCardEditor extends LitElement {
+  @property({ attribute: false }) hass?: HomeAssistant;
+  @state() private _config?: LauncherCardConfig;
+
+  setConfig(config: LauncherCardConfig) {
+    this._config = config;
+  }
+
+  static styles = css`
+    .row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    label {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .hint {
+      font-size: 12px;
+      color: var(--secondary-text-color, #757575);
+      margin-top: -2px;
+    }
+    input:not([type="checkbox"]) {
+      min-height: 40px;
+      border-radius: 8px;
+      border: 1px solid var(--divider-color, #e0e0e0);
+      background: var(--card-background-color, #fff);
+      color: inherit;
+      font-size: 14px;
+      padding: 0 10px;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    .checkbox-row label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 400;
+    }
+    .checkbox-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+    }
+  `;
+
+  private updateConfig(patch: Partial<LauncherCardConfig>) {
+    if (!this._config) return;
+    this._config = { ...this._config, ...patch };
+    this.dispatchEvent(
+      new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true })
+    );
+  }
+
+  render() {
+    if (!this._config) return nothing;
+    return html`
+      <div class="row">
+        <label>Title</label>
+        <input
+          type="text"
+          .value=${this._config.title ?? ""}
+          @input=${(e: Event) => this.updateConfig({ title: (e.target as HTMLInputElement).value })}
+        />
+      </div>
+
+      <div class="row checkbox-row">
+        <label>
+          <input
+            type="checkbox"
+            .checked=${this._config.overlay ?? false}
+            @change=${(e: Event) => this.updateConfig({ overlay: (e.target as HTMLInputElement).checked })}
+          />
+          Open as overlay
+        </label>
+        <span class="hint"
+          >When on, opens the panel full-screen on top of the current dashboard instead of navigating away — a close
+          button returns you to exactly where you launched it from.</span
+        >
+      </div>
+
+      <div class="row">
+        <label>Panel path</label>
+        <input
+          type="text"
+          placeholder="/mealie-recipes"
+          .value=${this._config.panel_path ?? ""}
+          @input=${(e: Event) => this.updateConfig({ panel_path: (e.target as HTMLInputElement).value })}
+        />
+        <span class="hint">Only needed if you've registered the panel under a different URL.</span>
+      </div>
+    `;
+  }
+}
+
 declare global {
   interface Window {
     customCards?: unknown[];
@@ -104,4 +214,7 @@ window.customCards.push({
 // second registration, so guard it like any other idempotent registration.
 if (!customElements.get("mealie-launcher-card")) {
   customElements.define("mealie-launcher-card", MealieLauncherCard);
+}
+if (!customElements.get("mealie-launcher-card-editor")) {
+  customElements.define("mealie-launcher-card-editor", MealieLauncherCardEditor);
 }
