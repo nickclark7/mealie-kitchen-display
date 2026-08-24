@@ -1,15 +1,27 @@
 import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 import type { HomeAssistant } from "../types";
 
 // Mounted directly on document.body (not inside any dashboard/view DOM), so
 // it layers on top of the whole Home Assistant UI without navigating away —
 // closing it just removes this element, leaving the dashboard underneath
 // exactly as the user left it.
-@customElement("mealie-launcher-overlay")
+//
+// Bundled independently into both mealie-launcher-card.js and
+// mealie-dashboard-card.js, and both load on every page via
+// add_extra_js_url/mealie-loader.js. Registering unconditionally via
+// @customElement would throw "NotSupportedError: already used with this
+// registry" whichever bundle's script evaluates second, aborting that
+// entire module — including its own unrelated card registration further
+// down. Same fix as confirm-dialog.ts.
 export class MealieLauncherOverlay extends LitElement {
   @property({ attribute: false }) hass?: HomeAssistant;
   @property({ attribute: false }) panelJsUrl = "";
+  // Optional deep-link query string (e.g. "?recipe=some-slug"), same format
+  // mealie-dashboard-card already navigates with. mealie-recipe-panel reads
+  // this from location.search on its own first update and strips it back
+  // off immediately after acting on it (see loadPanel below).
+  @property({ attribute: false }) deepLink = "";
 
   @state() private error: string | null = null;
 
@@ -92,6 +104,13 @@ export class MealieLauncherOverlay extends LitElement {
       // regardless of what URL the calling module itself was loaded from.
       const absoluteUrl = new URL(this.panelJsUrl, window.location.href).href;
       await import(/* @vite-ignore */ absoluteUrl);
+      if (this.deepLink) {
+        // Doesn't trigger a real navigation (no location-changed event), so
+        // HA's router never notices — the panel picks this up on its own
+        // first update, the same way it does after a normal navigate(), and
+        // replaces it right back with the plain dashboard path once handled.
+        history.replaceState(null, "", location.pathname + this.deepLink);
+      }
       const el = document.createElement("mealie-recipe-panel") as HTMLElement & {
         hass?: HomeAssistant;
         narrow?: boolean;
@@ -129,4 +148,8 @@ export class MealieLauncherOverlay extends LitElement {
           : html`<div class="status">Loading…</div>`}
     `;
   }
+}
+
+if (!customElements.get("mealie-launcher-overlay")) {
+  customElements.define("mealie-launcher-overlay", MealieLauncherOverlay);
 }

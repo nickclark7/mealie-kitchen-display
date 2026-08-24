@@ -126,7 +126,7 @@ Add **Mealie Recipe Card** (`custom:mealie-dashboard-card`) to any dashboard —
 | `ai-generate` | A prompt box; submitting launches the full panel with that prompt prefilled and generation already underway. Shows the same "needs configuring" / "disabled" messaging as the panel if AI isn't set up. |
 | `search` | Live recipe search, with an AI "Generate '\<query\>' recipe with AI" card and a "See all results in app" link. |
 
-Selecting a recipe from any mode (a meal-plan entry, a random tile, a search result) opens the full panel straight to that recipe. Every mode also accepts a **Panel path** option, only needed if the panel's been registered under a non-default URL.
+Selecting a recipe from any mode (a meal-plan entry, a random tile, a search result) opens the full panel straight to that recipe. Every mode also accepts an **Overlay** option (opens full-screen on top of the current dashboard instead of navigating away — same as the [launcher card's](#launcher-card) overlay mode) and a **Panel path** option, only needed if the panel's been registered under a non-default URL.
 
 ## AI Recipe Finder
 

@@ -4,6 +4,7 @@ import { MealieClient, describeError } from "./mealie-client";
 import type { HomeAssistant, MealPlanEntry, PanelConfig, PlanEntryType, RandomMode, RecipeSummary } from "./types";
 import { addDaysLocal, todayLocal } from "./date-utils";
 import "./components/confirm-dialog";
+import "./components/mealie-launcher-overlay";
 
 type CardMode = "mealplan" | "random" | "random-finder" | "ai-generate" | "search";
 
@@ -18,6 +19,9 @@ interface DashboardCardConfig {
   random_mode?: RandomMode; // "random" / "random-finder": which pool to pick from
   days?: number; // "mealplan" mode: how many days of the rolling window to show
   show_thumbnails?: boolean; // "mealplan" mode: show each planned recipe's photo
+  // Open the full panel as a full-screen overlay (mealie-launcher-card's
+  // overlay mode) instead of navigating away — same option, same component.
+  overlay?: boolean;
 }
 
 const ENTRY_ORDER: PlanEntryType[] = ["breakfast", "lunch", "dinner", "side", "snack", "drink", "dessert"];
@@ -89,6 +93,7 @@ export class MealieDashboardCard extends LitElement {
     const prevMode = this.config.mode;
     this.config = {
       panel_path: "/mealie-recipes",
+      overlay: false,
       count: 4,
       random_mode: "all",
       days: 7,
@@ -260,11 +265,41 @@ export class MealieDashboardCard extends LitElement {
     }
   }
 
+  // Cached after the first overlay open so re-opening doesn't re-fetch it —
+  // same pattern as mealie-launcher-card.
+  private overlayJsUrl: string | null = null;
+
   // Same technique mealie-launcher-card uses: a plain pushState + a
   // location-changed event, which HA's frontend router listens for globally.
+  // In overlay mode, opens the panel on top of the current dashboard instead
+  // — path is always "<panel_path><query>", so the query string alone
+  // becomes the overlay's deep link.
   private navigate(path: string) {
+    if (this.config.overlay) {
+      const qIndex = path.indexOf("?");
+      this.openOverlay(qIndex >= 0 ? path.slice(qIndex) : "");
+      return;
+    }
     history.pushState(null, "", path);
     window.dispatchEvent(new CustomEvent("location-changed", { bubbles: true, composed: true }));
+  }
+
+  private async openOverlay(deepLink: string) {
+    if (!this.hass) return;
+    if (!this.overlayJsUrl) {
+      const res = await this.hass.callApi<{ url: string }>("GET", "mealie_recipe_panel/panel-asset-url");
+      this.overlayJsUrl = res.url;
+    }
+    const overlay = document.createElement("mealie-launcher-overlay") as HTMLElement & {
+      hass?: HomeAssistant;
+      panelJsUrl?: string;
+      deepLink?: string;
+    };
+    overlay.hass = this.hass;
+    overlay.panelJsUrl = this.overlayJsUrl;
+    overlay.deepLink = deepLink;
+    overlay.addEventListener("overlay-close", () => overlay.remove(), { once: true });
+    document.body.appendChild(overlay);
   }
 
   private openRecipe(recipe: RecipeSummary | null | undefined) {
@@ -1087,6 +1122,21 @@ export class MealieDashboardCardEditor extends LitElement {
             </div>
           `
         : nothing}
+
+      <div class="row checkbox-row">
+        <label>
+          <input
+            type="checkbox"
+            .checked=${this._config.overlay ?? false}
+            @change=${(e: Event) => this.updateConfig({ overlay: (e.target as HTMLInputElement).checked })}
+          />
+          Open as overlay
+        </label>
+        <span class="hint"
+          >When on, selecting a recipe (or generating/searching) opens the panel full-screen on top of the current
+          dashboard instead of navigating away — a close button returns you to exactly where you were.</span
+        >
+      </div>
 
       <div class="row">
         <label>Panel path</label>
