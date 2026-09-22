@@ -8,6 +8,9 @@ export class AiRecipePreview extends LitElement {
   @property({ attribute: false }) recipe: GeneratedRecipe | null = null;
   @property({ type: String }) imageBase64: string | null = null;
   @property({ type: String }) imageMime: string | null = null;
+  // Used instead of imageBase64 for a recipe reopened from past AI recipes,
+  // whose photo is stored server-side rather than held in the browser.
+  @property({ type: String }) imageUrl: string | null = null;
   @property({ type: String }) imageError: string | null = null;
   @property({ type: Boolean }) imageLoading = false;
   @property({ type: Boolean }) saving = false;
@@ -372,23 +375,38 @@ export class AiRecipePreview extends LitElement {
     this.dispatchEvent(new CustomEvent("save", { detail: { recipe: this.draft } }));
   }
 
+  // Same event recipe-detail-view uses, so the panel's existing shopping-list
+  // dialog handles it — lets a past AI recipe be cooked from before (or
+  // without ever) saving it to Mealie.
+  private onAddToShoppingList() {
+    const items = (this.draft?.ingredients ?? []).map((i) => i.trim()).filter(Boolean);
+    if (!items.length) return;
+    this.dispatchEvent(new CustomEvent("open-shopping-list", { detail: { items } }));
+  }
+
   render() {
     const recipe = this.draft;
     if (!recipe) return html`<p>Loading…</p>`;
     const canSave = !this.saving && !!recipe.name.trim();
+    const heroSrc = this.imageBase64
+      ? `data:${this.imageMime || "image/png"};base64,${this.imageBase64}`
+      : this.imageUrl;
     return html`
-      ${this.imageBase64
-        ? html`<img class="hero" src="data:${this.imageMime || "image/png"};base64,${this.imageBase64}" alt="" />`
+      ${heroSrc
+        ? html`<img class="hero" src=${heroSrc} alt="" />`
         : this.imageLoading
           ? html`<div class="image-placeholder">📷 Generating photo…</div>`
           : nothing}
-      ${!this.imageBase64 && !this.imageLoading && this.imageError
+      ${!heroSrc && !this.imageLoading && this.imageError
         ? html`<p class="image-notice">No image generated: ${this.imageError}</p>`
         : nothing}
 
       <div class="action-row">
         <button class="pill-button save" ?disabled=${!canSave} @click=${this.onSave}>
-          ${this.saving ? "Saving…" : "💾 Save to Mealie"}
+          ${this.saving ? "Saving…" : "💾 Save to My Recipes"}
+        </button>
+        <button class="pill-button" ?disabled=${!recipe.ingredients.some((i) => i.trim())} @click=${this.onAddToShoppingList}>
+          🛒 Add to shopping list
         </button>
         <button class="pill-button" ?disabled=${this.saving} @click=${() => this.dispatchEvent(new CustomEvent("regenerate"))}>
           🔄 Regenerate

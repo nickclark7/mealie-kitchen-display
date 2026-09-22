@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { MealieClient, describeError } from "./mealie-client";
 import type {
+  AiHistoryEntry,
   Cookbook,
   GeneratedRecipe,
   GenerateImageResult,
@@ -100,6 +101,13 @@ export class MealieRecipePanel extends LitElement {
   @state() private aiLastAction: "generate" | "import" = "generate";
   @state() private aiLastImportText = "";
   @state() private aiLastImportImage: File | null = null;
+  // Past AI recipes (HA storage, not Mealie). aiHistoryId is the entry the
+  // current preview belongs to — every generate/import creates one.
+  @state() private aiHistory: AiHistoryEntry[] = [];
+  @state() private aiHistoryLoading = false;
+  @state() private aiHistoryId: string | null = null;
+  @state() private aiImageUrl: string | null = null;
+  @state() private pendingDeleteHistoryEntry: AiHistoryEntry | null = null;
 
   private client?: MealieClient;
 
@@ -464,6 +472,51 @@ export class MealieRecipePanel extends LitElement {
     this.showAiView = true;
     this.aiGeneratedRecipe = null;
     this.aiError = "";
+    this.loadAiHistory();
+  }
+
+  private async loadAiHistory() {
+    if (!this.client || !this.panelConfig.aiEnabled) return;
+    this.aiHistoryLoading = true;
+    try {
+      this.aiHistory = (await this.client.getAiHistory()).items;
+    } catch {
+      // Non-fatal: the Past tab just stays as it was.
+    } finally {
+      this.aiHistoryLoading = false;
+    }
+  }
+
+  private openAiHistoryEntry(entry: AiHistoryEntry) {
+    this.aiGeneratedRecipe = entry.recipe;
+    this.aiHistoryId = entry.id;
+    this.aiImageBase64 = null;
+    this.aiImageMime = null;
+    this.aiImageError = null;
+    this.aiImageLoading = false;
+    this.aiImageRequest = null;
+    this.aiImageUrl = entry.hasImage ? this.client!.aiHistoryImageUrl(entry.id) : null;
+    // So Regenerate reruns the same request this entry came from.
+    this.aiLastAction = entry.source;
+    if (entry.source === "import") {
+      this.aiLastImportText = entry.prompt;
+      this.aiLastImportImage = null;
+    } else {
+      this.aiPrompt = entry.prompt;
+    }
+  }
+
+  private async onConfirmDeleteHistoryEntry() {
+    const entry = this.pendingDeleteHistoryEntry;
+    this.pendingDeleteHistoryEntry = null;
+    if (!this.client || !entry) return;
+    this.aiHistory = this.aiHistory.filter((e) => e.id !== entry.id);
+    try {
+      await this.client.deleteAiHistoryEntry(entry.id);
+    } catch (err) {
+      this.aiError = await describeError(err, "Failed to delete past recipe");
+      this.loadAiHistory();
+    }
   }
 
   private onAiGenerateFromSearch(e: CustomEvent<{ query: string }>) {
@@ -485,6 +538,9 @@ export class MealieRecipePanel extends LitElement {
     this.aiLastAction = "generate";
     this.aiLastImportText = "";
     this.aiLastImportImage = null;
+    this.aiHistoryId = null;
+    this.aiImageUrl = null;
+    this.aiImageRequest = null;
   }
 
   private closeAiPreview() {
@@ -493,6 +549,11 @@ export class MealieRecipePanel extends LitElement {
     this.aiImageMime = null;
     this.aiImageError = null;
     this.aiImageLoading = false;
+    this.aiImageRequest = null;
+    this.aiHistoryId = null;
+    this.aiImageUrl = null;
+    // The recipe just previewed is now in past recipes.
+    this.loadAiHistory();
   }
 
   private async onAiGenerate() {
@@ -501,12 +562,14 @@ export class MealieRecipePanel extends LitElement {
     this.aiError = "";
     this.aiLastAction = "generate";
     try {
-      const recipe = await this.client.generateRecipe(this.aiPrompt.trim());
+      const { recipe, historyId } = await this.client.generateRecipe(this.aiPrompt.trim());
       this.aiGeneratedRecipe = recipe;
+      this.aiHistoryId = historyId;
+      this.aiImageUrl = null;
       this.aiImageBase64 = null;
       this.aiImageMime = null;
       this.aiImageError = null;
-      this.startAiImageGeneration(recipe.name);
+      this.startAiImageGeneration(recipe.name, historyId);
     } catch (err) {
       this.aiError = await describeError(err, "Failed to generate a recipe");
     } finally {
@@ -524,12 +587,14 @@ export class MealieRecipePanel extends LitElement {
     this.aiImporting = true;
     this.aiError = "";
     try {
-      const recipe = await this.client.importRecipe(text, image);
+      const { recipe, historyId } = await this.client.importRecipe(text, image);
       this.aiGeneratedRecipe = recipe;
+      this.aiHistoryId = historyId;
+      this.aiImageUrl = null;
       this.aiImageBase64 = null;
       this.aiImageMime = null;
       this.aiImageError = null;
-      this.startAiImageGeneration(recipe.name);
+      this.startAiImageGeneration(recipe.name, historyId);
     } catch (err) {
       this.aiError = await describeError(err, "Failed to import recipe");
     } finally {
@@ -543,22 +608,32 @@ export class MealieRecipePanel extends LitElement {
   // request promise is stashed on `aiImageRequest` so Save can grab it and
   // let it finish in the background if it's still running when pressed —
   // see onAiSaveRecipe/attachImageWhenReady.
-  private startAiImageGeneration(subject: string) {
+  //
+  // The backend also stores the photo with the past-recipe entry (historyId)
+  // itself, so it isn't lost if the preview is closed before it arrives.
+  // Results are only applied if this is still the request the preview is
+  // showing — otherwise a slow photo could land on a different recipe.
+  private startAiImageGeneration(subject: string, historyId: string) {
     if (!this.client) return;
     this.aiImageLoading = true;
-    const request = this.client.generateRecipeImage(subject);
+    const request = this.client.generateRecipeImage(subject, undefined, historyId);
     this.aiImageRequest = request;
+    const isCurrent = () => this.aiImageRequest === request;
     request
       .then((result) => {
+        if (!isCurrent()) return;
         this.aiImageBase64 = result.imageBase64;
         this.aiImageMime = result.imageMime;
         this.aiImageError = result.imageError;
       })
       .catch(async (err) => {
+        if (!isCurrent()) return;
         this.aiImageError = await describeError(err, "Failed to generate an image");
       })
       .finally(() => {
-        this.aiImageLoading = false;
+        if (isCurrent()) this.aiImageLoading = false;
+        // Picks up the new thumbnail if the Past tab is what's showing.
+        if (this.showAiView && !this.aiGeneratedRecipe) this.loadAiHistory();
       });
   }
 
@@ -602,8 +677,10 @@ export class MealieRecipePanel extends LitElement {
       const { slug } = await this.client.saveGeneratedRecipe(
         e.detail.recipe,
         this.aiImageBase64,
-        this.aiImageMime
+        this.aiImageMime,
+        this.aiHistoryId
       );
+      this.aiHistory = this.aiHistory.filter((h) => h.id !== this.aiHistoryId);
       if (pendingImageRequest) {
         this.attachImageWhenReady(slug, pendingImageRequest);
       }
@@ -769,13 +846,22 @@ export class MealieRecipePanel extends LitElement {
               .recipe=${this.aiGeneratedRecipe}
               .imageBase64=${this.aiImageBase64}
               .imageMime=${this.aiImageMime}
+              .imageUrl=${this.aiImageUrl}
               .imageError=${this.aiImageError}
               .imageLoading=${this.aiImageLoading}
               .saving=${this.aiSaving}
               @save=${(e: CustomEvent<{ recipe: GeneratedRecipe }>) => this.onAiSaveRecipe(e)}
               @regenerate=${() => this.onAiRegenerate()}
+              @open-shopping-list=${this.onOpenShoppingList}
             ></ai-recipe-preview>
           </panel-shell>
+          <shopping-list-dialog
+            .open=${this.showShoppingListDialog}
+            .lists=${this.shoppingLists}
+            .itemCount=${this.pendingShoppingItems.length}
+            @shopping-confirm=${this.onShoppingConfirm}
+            @shopping-cancel=${() => (this.showShoppingListDialog = false)}
+          ></shopping-list-dialog>
         `;
       }
       return html`
@@ -789,8 +875,23 @@ export class MealieRecipePanel extends LitElement {
             @prompt-change=${(e: CustomEvent<{ value: string }>) => (this.aiPrompt = e.detail.value)}
             @generate=${() => this.onAiGenerate()}
             @import=${(e: CustomEvent<{ text: string; image: File | null }>) => this.onAiImport(e)}
+            .history=${this.aiHistory}
+            .historyLoading=${this.aiHistoryLoading}
+            .historyImageUrl=${(entry: AiHistoryEntry) => this.client!.aiHistoryImageUrl(entry.id)}
+            @history-open=${(e: CustomEvent<{ entry: AiHistoryEntry }>) => this.openAiHistoryEntry(e.detail.entry)}
+            @history-delete=${(e: CustomEvent<{ entry: AiHistoryEntry }>) =>
+              (this.pendingDeleteHistoryEntry = e.detail.entry)}
           ></ai-recipe-view>
         </panel-shell>
+        <confirm-dialog
+          .open=${!!this.pendingDeleteHistoryEntry}
+          heading="Delete past recipe?"
+          message=${`"${this.pendingDeleteHistoryEntry?.recipe.name || "This recipe"}" will be removed from your past AI recipes.`}
+          confirmLabel="Delete"
+          destructive
+          @confirm=${() => this.onConfirmDeleteHistoryEntry()}
+          @cancel=${() => (this.pendingDeleteHistoryEntry = null)}
+        ></confirm-dialog>
       `;
     }
 

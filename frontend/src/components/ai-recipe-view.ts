@@ -1,5 +1,15 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import type { AiHistoryEntry } from "../types";
+
+function relativeDate(iso: string): string {
+  const then = new Date(iso);
+  const days = Math.floor((Date.now() - then.getTime()) / 86400000);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return then.toLocaleDateString();
+}
 
 @customElement("ai-recipe-view")
 export class AiRecipeView extends LitElement {
@@ -8,8 +18,11 @@ export class AiRecipeView extends LitElement {
   @property({ type: Boolean }) importing = false;
   @property({ type: String }) error = "";
   @property({ type: Boolean }) aiConfigured = true;
+  @property({ attribute: false }) history: AiHistoryEntry[] = [];
+  @property({ type: Boolean }) historyLoading = false;
+  @property({ attribute: false }) historyImageUrl: (entry: AiHistoryEntry) => string = () => "";
 
-  @state() private tab: "generate" | "import" = "generate";
+  @state() private tab: "generate" | "import" | "history" = "generate";
   @state() private importText = "";
   @state() private importImage: File | null = null;
   @state() private importImagePreview: string | null = null;
@@ -125,6 +138,83 @@ export class AiRecipeView extends LitElement {
       font-size: 13px;
       margin: 14px 0;
     }
+    .history-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .history-list li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--divider-color, #e0e0e0);
+      border-radius: 14px;
+      background: var(--card-background-color, #fff);
+      overflow: hidden;
+    }
+    .history-open {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: none;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      padding: 0;
+      cursor: pointer;
+      font: inherit;
+    }
+    .history-thumb {
+      flex-shrink: 0;
+      width: 72px;
+      height: 72px;
+      object-fit: cover;
+      background: var(--secondary-background-color, #f0f0f0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+    .history-text {
+      min-width: 0;
+      padding: 8px 0;
+    }
+    .history-name {
+      font-size: 16px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-meta {
+      font-size: 13px;
+      color: var(--secondary-text-color, #757575);
+      margin-top: 2px;
+    }
+    .history-delete {
+      flex-shrink: 0;
+      border: none;
+      background: transparent;
+      color: var(--secondary-text-color, #757575);
+      width: 44px;
+      height: 44px;
+      margin-right: 6px;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .history-empty {
+      text-align: center;
+      color: var(--secondary-text-color, #757575);
+      font-size: 15px;
+      line-height: 1.5;
+      padding: 24px 8px;
+    }
     .setup-needed {
       text-align: center;
       padding: 32px 16px;
@@ -235,6 +325,52 @@ export class AiRecipeView extends LitElement {
     `;
   }
 
+  private renderHistoryTab() {
+    if (this.historyLoading && !this.history.length) {
+      return html`<p class="history-empty">Loading…</p>`;
+    }
+    if (!this.history.length) {
+      return html`
+        <p class="history-empty">
+          Recipes you generate or import show up here automatically, so you can come back to one after
+          cooking it and save it to My Recipes if it was a keeper.
+        </p>
+      `;
+    }
+    return html`
+      <p class="intro">Your last ${this.history.length} AI recipes — not saved to Mealie until you choose to.</p>
+      <ul class="history-list">
+        ${this.history.map(
+          (entry) => html`
+            <li>
+              <button
+                class="history-open"
+                @click=${() => this.dispatchEvent(new CustomEvent("history-open", { detail: { entry } }))}
+              >
+                ${entry.hasImage
+                  ? html`<img class="history-thumb" src=${this.historyImageUrl(entry)} alt="" loading="lazy" />`
+                  : html`<div class="history-thumb">${entry.source === "import" ? "📷" : "✨"}</div>`}
+                <div class="history-text">
+                  <div class="history-name">${entry.recipe.name || "Untitled recipe"}</div>
+                  <div class="history-meta">
+                    ${relativeDate(entry.createdAt)} · ${entry.source === "import" ? "Imported" : "Generated"}
+                  </div>
+                </div>
+              </button>
+              <button
+                class="history-delete"
+                aria-label="Delete past recipe"
+                @click=${() => this.dispatchEvent(new CustomEvent("history-delete", { detail: { entry } }))}
+              >
+                ✕
+              </button>
+            </li>
+          `
+        )}
+      </ul>
+    `;
+  }
+
   private renderSetupNeeded() {
     return html`
       <div class="setup-needed">
@@ -261,8 +397,15 @@ export class AiRecipeView extends LitElement {
         <button class=${this.tab === "import" ? "active" : ""} @click=${() => (this.tab = "import")}>
           📷 Import
         </button>
+        <button class=${this.tab === "history" ? "active" : ""} @click=${() => (this.tab = "history")}>
+          🕘 Past
+        </button>
       </div>
-      ${this.tab === "generate" ? this.renderGenerateTab() : this.renderImportTab()}
+      ${this.tab === "generate"
+        ? this.renderGenerateTab()
+        : this.tab === "import"
+          ? this.renderImportTab()
+          : this.renderHistoryTab()}
       ${this.error ? html`<p class="error">${this.error}</p>` : nothing}
     `;
   }

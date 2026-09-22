@@ -1,6 +1,8 @@
 import type {
+  AiHistoryEntry,
   Cookbook,
   GeneratedRecipe,
+  GeneratedRecipeResult,
   GenerateImageResult,
   HomeAssistant,
   MealPlanEntry,
@@ -150,43 +152,63 @@ export class MealieClient {
     return this.hass.callApi("DELETE", `mealie_recipe_panel/shopping-lists/${listId}`);
   }
 
-  async generateRecipe(prompt: string): Promise<GeneratedRecipe> {
-    const { recipe } = await this.hass.callApi<{ recipe: GeneratedRecipe }>(
-      "POST",
-      `mealie_recipe_panel/ai/generate-recipe`,
-      { prompt }
-    );
-    return recipe;
+  async generateRecipe(prompt: string): Promise<GeneratedRecipeResult> {
+    return this.hass.callApi("POST", `mealie_recipe_panel/ai/generate-recipe`, { prompt });
   }
 
+  // historyId (when set) lets the backend use the photo stored with a past
+  // AI recipe, and removes that entry from past recipes once it's saved.
   async saveGeneratedRecipe(
     recipe: GeneratedRecipe,
     imageBase64: string | null,
-    imageMime: string | null
+    imageMime: string | null,
+    historyId: string | null
   ): Promise<{ slug: string }> {
-    return this.hass.callApi("POST", `mealie_recipe_panel/ai/save-recipe`, { recipe, imageBase64, imageMime });
+    return this.hass.callApi("POST", `mealie_recipe_panel/ai/save-recipe`, {
+      recipe,
+      imageBase64,
+      imageMime,
+      historyId,
+    });
   }
 
-  async importRecipe(text: string, image: File | null): Promise<GeneratedRecipe> {
+  async getAiHistory(): Promise<{ items: AiHistoryEntry[] }> {
+    return this.hass.callApi("GET", `mealie_recipe_panel/ai/history`);
+  }
+
+  async deleteAiHistoryEntry(id: string): Promise<unknown> {
+    return this.hass.callApi("DELETE", `mealie_recipe_panel/ai/history/${id}`);
+  }
+
+  aiHistoryImageUrl(id: string): string {
+    return `/api/mealie_recipe_panel/ai/history/${id}/image`;
+  }
+
+  async importRecipe(text: string, image: File | null): Promise<GeneratedRecipeResult> {
     let imageBase64: string | null = null;
     let imageMime: string | null = null;
     if (image) {
       imageBase64 = await fileToBase64(image);
       imageMime = image.type || "image/jpeg";
     }
-    const { recipe } = await this.hass.callApi<{ recipe: GeneratedRecipe }>(
-      "POST",
-      `mealie_recipe_panel/ai/import-recipe`,
-      { text, imageBase64, imageMime }
-    );
-    return recipe;
+    return this.hass.callApi("POST", `mealie_recipe_panel/ai/import-recipe`, { text, imageBase64, imageMime });
   }
 
   // Split out from generate/import (rather than requested inline) so the
   // frontend can show the recipe text immediately and let the — much
   // slower — photo pop in once it's ready, instead of blocking on both.
-  async generateRecipeImage(subject: string, guidance?: string): Promise<GenerateImageResult> {
-    return this.hass.callApi("POST", `mealie_recipe_panel/ai/generate-recipe-image`, { subject, guidance });
+  // historyId (when set) has the backend store the photo with that past AI
+  // recipe too, even if the preview is closed before it finishes.
+  async generateRecipeImage(
+    subject: string,
+    guidance?: string,
+    historyId?: string | null
+  ): Promise<GenerateImageResult> {
+    return this.hass.callApi("POST", `mealie_recipe_panel/ai/generate-recipe-image`, {
+      subject,
+      guidance,
+      historyId,
+    });
   }
 
   // Attaches a photo to a recipe that's already been saved — used when the

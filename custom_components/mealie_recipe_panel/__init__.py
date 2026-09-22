@@ -10,6 +10,7 @@ from homeassistant.components.panel_custom import async_register_panel
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
+from .ai_history import AiHistory
 from .const import DOMAIN, PANEL_URL_PATH, STATIC_URL_BASE
 from .http import VIEWS
 
@@ -31,6 +32,11 @@ async def _versioned_url(hass: HomeAssistant, filename: str) -> str:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
+
+    if "ai_history" not in hass.data[DOMAIN]:
+        history = AiHistory(hass)
+        await history.async_load()
+        hass.data[DOMAIN]["ai_history"] = history
 
     if not hass.data[DOMAIN].get("_views_registered"):
         for view_cls in VIEWS:
@@ -82,3 +88,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    # Past AI recipes are the only data this integration stores itself —
+    # remove them (and their photos) along with the integration.
+    history = hass.data.get(DOMAIN, {}).pop("ai_history", None) or AiHistory(hass)
+    await history.async_remove_all()

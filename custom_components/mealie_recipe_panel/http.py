@@ -18,6 +18,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.network import get_url
 
+from .ai_history import get_history
 from .const import (
     API_URL_BASE,
     CONF_AI_ENABLED,
@@ -580,7 +581,10 @@ class MealieGenerateRecipeView(MealieProxyView):
             raise web.HTTPBadGateway(reason=f"AI recipe generation failed: {err}") from err
 
         recipe = result.get("data", result) if isinstance(result, dict) else result
-        return web.json_response({"recipe": recipe})
+        # Kept automatically as a past AI recipe (HA storage, not Mealie) so
+        # it can be reopened and promoted to My Recipes later.
+        history_id = await get_history(self.hass).add(recipe, "generate", prompt)
+        return web.json_response({"recipe": recipe, "historyId": history_id})
 
 
 class MealieImportRecipeView(MealieProxyView):
@@ -656,7 +660,8 @@ class MealieImportRecipeView(MealieProxyView):
                 await self._delete_attachment(attachment_path)
 
         recipe = result.get("data", result) if isinstance(result, dict) else result
-        return web.json_response({"recipe": recipe})
+        history_id = await get_history(self.hass).add(recipe, "import", text)
+        return web.json_response({"recipe": recipe, "historyId": history_id})
 
 
 class MealieGenerateRecipeImageView(MealieProxyView):
@@ -693,6 +698,13 @@ class MealieGenerateRecipeImageView(MealieProxyView):
         except HomeAssistantError as err:
             _LOGGER.warning("AI image generation failed: %s", err)
             image_error = str(err)
+
+        # Attached server-side, so the past-recipe entry gets its photo even
+        # if the user closed the preview before generation finished.
+        if image_base64 and (history_id := body.get("historyId")):
+            await get_history(self.hass).set_image(
+                history_id, base64.b64decode(image_base64), image_mime
+            )
 
         return web.json_response(
             {"imageBase64": image_base64, "imageMime": image_mime, "imageError": image_error}
@@ -737,6 +749,8 @@ class MealieSaveRecipeView(MealieProxyView):
         # MealieMyRecipeView already uses for the manual toggle.
         await self._set_tag_state(slug, MY_RECIPE_TAG_NAME, True, MY_RECIPES_COOKBOOK_NAME)
 
+        history = get_history(self.hass)
+        history_id = body.get("historyId")
         image_base64 = body.get("imageBase64")
         if image_base64:
             mime = body.get("imageMime") or "image/png"
@@ -747,8 +761,71 @@ class MealieSaveRecipeView(MealieProxyView):
                 _LOGGER.warning("Could not decode generated recipe image: %s", err)
             else:
                 await self._upload_recipe_image(slug, image_bytes, extension)
+        elif history_id and (stored := await history.read_image(history_id)):
+            # Reopened from past recipes: the photo lives in history storage
+            # rather than in the browser.
+            image_bytes, mime = stored
+            await self._upload_recipe_image(slug, image_bytes, mime.split("/")[-1])
+
+        # Promoted to a real Mealie recipe now — drop the draft so it doesn't
+        # linger as a duplicate in past recipes.
+        if history_id:
+            await history.remove(history_id)
 
         return web.json_response({"slug": slug})
+
+
+class MealieAiHistoryView(MealieProxyView):
+    """Past AI-generated/imported recipes not yet saved to Mealie."""
+
+    url = f"{API_URL_BASE}/ai/history"
+    name = f"api:{DOMAIN}:ai_history"
+
+    async def get(self, request: web.Request) -> web.Response:
+        self._require_ai_enabled()
+        items = [
+            {
+                "id": e["id"],
+                "createdAt": e["createdAt"],
+                "source": e["source"],
+                "prompt": e["prompt"],
+                "recipe": e["recipe"],
+                "hasImage": bool(e.get("imageFile")),
+            }
+            for e in get_history(self.hass).list()
+        ]
+        return web.json_response({"items": items})
+
+
+class MealieAiHistoryEntryView(MealieProxyView):
+    url = f"{API_URL_BASE}/ai/history/{{entry_id}}"
+    name = f"api:{DOMAIN}:ai_history_entry"
+
+    async def delete(self, request: web.Request, entry_id: str) -> web.Response:
+        self._require_ai_enabled()
+        if not await get_history(self.hass).remove(entry_id):
+            raise web.HTTPNotFound(reason="No such past recipe")
+        return web.json_response({})
+
+
+class MealieAiHistoryImageView(MealieProxyView):
+    # Plain <img src> can't carry HA's bearer token — same reasoning as
+    # MealieImageView. Entry ids are random uuids, and an entry's photo never
+    # changes once written (a new photo gets a fresh ?v= from the frontend).
+    requires_auth = False
+    url = f"{API_URL_BASE}/ai/history/{{entry_id}}/image"
+    name = f"api:{DOMAIN}:ai_history_image"
+
+    async def get(self, request: web.Request, entry_id: str) -> web.Response:
+        stored = await get_history(self.hass).read_image(entry_id)
+        if stored is None:
+            raise web.HTTPNotFound()
+        body, content_type = stored
+        return web.Response(
+            body=body,
+            content_type=content_type,
+            headers={"Cache-Control": f"public, max-age={MealieImageView._CACHE_SECONDS}"},
+        )
 
 
 class MealieRecipeAiImageView(MealieProxyView):
@@ -930,6 +1007,9 @@ VIEWS = (
     MealieImportRecipeView,
     MealieSaveRecipeView,
     MealieRecipeAiImageView,
+    MealieAiHistoryView,
+    MealieAiHistoryEntryView,
+    MealieAiHistoryImageView,
     MealiePanelAssetView,
     MealieMealplanView,
     MealieMealplanEntryView,

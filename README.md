@@ -69,7 +69,7 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
 - Delete a recipe, with confirmation
 - A matching Lovelace launcher card, so the panel can also be opened from any dashboard
 - **A configurable dashboard card** with its own visual editor — meal plan, random recipes, a "surprise me" picker, the AI recipe generator, or recipe search, each launching straight into the full panel — see [Dashboard Card](#dashboard-card) below
-- **AI recipe finder**: generate a recipe from a text description, or import one from a photo and/or pasted text, using your own Home Assistant `ai_task.*` entities — see [AI Recipe Finder](#ai-recipe-finder) below
+- **AI recipe finder**: generate a recipe from a text description, or import one from a photo and/or pasted text, using your own Home Assistant `ai_task.*` entities. Past AI recipes are kept automatically so you can save the keepers later — see [AI Recipe Finder](#ai-recipe-finder) below
 - AI tasks can be disabled and removed form the interface for those who dont want that capability
 
 ## Installation
@@ -130,12 +130,13 @@ Selecting a recipe from any mode (a meal-plan entry, a random tile, a search res
 
 ## AI Recipe Finder
 
-Tap the ✨ button on the recipe list to open the AI Recipe Finder. It has two tabs:
+Tap the ✨ button on the recipe list to open the AI Recipe Finder. It has three tabs:
 
 - **Generate** — describe what you want ("a thick and crispy pizza dough"), and an LLM writes a full recipe.
 - **Import** — take/upload a photo of a recipe (a cookbook page, a handwritten card, a screenshot) and/or paste in recipe text, and an LLM transcribes it into the same structured format.
+- **Past** — every recipe you've generated or imported, kept automatically (the last 20) so you can come back to one after cooking it. Past recipes are stored in Home Assistant, not Mealie, until you choose **Save to My Recipes**; you can also add one's ingredients to a shopping list without saving it.
 
-Either way you land on an editable preview — every field, including the name, can be changed, ingredients and instructions can be added/removed, and steps can be dragged into a new order — before you save it into Mealie. Optionally, a second AI model generates a photo for the recipe at the same time.
+Either way you land on an editable preview — every field, including the name, can be changed, ingredients and instructions can be added/removed, and steps can be dragged into a new order — before you save it to My Recipes in Mealie. Optionally, a second AI model generates a photo for the recipe at the same time.
 
 This feature is **off by default** and needs no LLM provider bundled with it — it works entirely through Home Assistant's own [`ai_task`](https://www.home-assistant.io/integrations/ai_task/) platform, so it uses whatever AI integration(s) you've already set up in Home Assistant (OpenAI, Anthropic Claude, Google Generative AI, a local Ollama server, etc).
 

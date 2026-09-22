@@ -116,6 +116,22 @@ export interface GeneratedRecipe {
   instructions: string[];
 }
 
+// A recipe the AI features produced, kept in HA storage (not Mealie) until
+// it's promoted to My Recipes.
+export interface AiHistoryEntry {
+  id: string;
+  createdAt: string;
+  source: "generate" | "import";
+  prompt: string;
+  recipe: GeneratedRecipe;
+  hasImage: boolean;
+}
+
+export interface GeneratedRecipeResult {
+  recipe: GeneratedRecipe;
+  historyId: string;
+}
+
 export interface GenerateImageResult {
   imageBase64: string | null;
   imageMime: string | null;
