@@ -53,6 +53,8 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
   </a>
   <a href="https://github.com/user-attachments/assets/2acd1009-35b7-4572-82ef-10daa2749421">
     <img src="https://github.com/user-attachments/assets/2acd1009-35b7-4572-82ef-10daa2749421" width="180" alt="Screenshot 15"/>
+   <img width="180" alt="image" src="https://github.com/user-attachments/assets/2c4e06c7-0918-4434-8cb6-50cca9d55ef7" />
+
   </a>
 </p>
 
