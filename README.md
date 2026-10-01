@@ -4,8 +4,6 @@ A touch-friendly Home Assistant sidebar panel for browsing, searching, and cooki
 
 All requests to Mealie are proxied server-side through Home Assistant, so it works regardless of whether HA or Mealie run on HTTP or HTTPS — the browser only ever talks to HA's own origin.
 <p align="center">
- 
-<p align="center">
   <a href="https://github.com/user-attachments/assets/27e6a962-536b-4d59-bcd4-a875c359de9a">
     <img src="https://github.com/user-attachments/assets/27e6a962-536b-4d59-bcd4-a875c359de9a" width="180" alt="Screenshot 1"/>
   </a>
@@ -53,9 +51,9 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
   </a>
   <a href="https://github.com/user-attachments/assets/2acd1009-35b7-4572-82ef-10daa2749421">
     <img src="https://github.com/user-attachments/assets/2acd1009-35b7-4572-82ef-10daa2749421" width="180" alt="Screenshot 15"/>
-   <img width="180" alt="image" src="https://github.com/user-attachments/assets/8a3ea77b-6511-440f-8384-f35bdc2c262b" />
-
-
+  </a>
+  <a href="https://github.com/user-attachments/assets/8a3ea77b-6511-440f-8384-f35bdc2c262b">
+    <img src="https://github.com/user-attachments/assets/8a3ea77b-6511-440f-8384-f35bdc2c262b" width="180" alt="Screenshot 16"/>
   </a>
 </p>
 
