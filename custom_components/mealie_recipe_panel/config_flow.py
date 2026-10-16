@@ -17,6 +17,7 @@ from .const import (
     CONF_AI_IMAGE_ENTITY,
     CONF_AI_TEXT_ENTITY,
     CONF_MEALIE_TOKEN,
+    CONF_VOICE_DISPLAY_SATELLITES,
     CONF_VOICE_ENABLED,
     CONF_VOICE_PIPELINE,
     DOMAIN,
@@ -160,6 +161,16 @@ class MealieRecipePanelOptionsFlow(config_entries.OptionsFlow):
                         # valid even if it's since been renamed/removed.
                         custom_value=True,
                         mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Optional(
+                    CONF_VOICE_DISPLAY_SATELLITES,
+                    description={
+                        "suggested_value": current.get(CONF_VOICE_DISPLAY_SATELLITES)
+                    },
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain="assist_satellite", multiple=True
                     )
                 ),
             }

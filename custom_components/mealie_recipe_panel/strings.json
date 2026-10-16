@@ -22,13 +22,14 @@
     "step": {
       "init": {
         "title": "AI Recipe Finder & voice input",
-        "description": "Turn AI recipe features on or off, and pick which AI Task entities power them. If AI is enabled but no text entity is chosen yet, the panel still shows the AI buttons and prompts the user to finish setup here.\n\nVoice input adds a microphone button to the AI prompt and the dashboard card's search box, transcribing speech with the speech-to-text engine of the Assist pipeline you choose. Leave the pipeline empty to use your preferred one, and pick a Whisper-based pipeline rather than Speech-to-Phrase, which only recognises pre-defined phrases.",
+        "description": "Turn AI recipe features on or off, and pick which AI Task entities power them. If AI is enabled but no text entity is chosen yet, the panel still shows the AI buttons and prompts the user to finish setup here.\n\nVoice input adds a microphone button to the AI prompt and the dashboard card's search box, transcribing speech with the speech-to-text engine of the Assist pipeline you choose. Leave the pipeline empty to use your preferred one, and pick a Whisper-based pipeline rather than Speech-to-Phrase, which only recognises pre-defined phrases.\n\nVoice satellites listed below can be asked to show recipes on their own screen (\"show me a recipe for fried chicken\"). This needs an assistant with the Assist LLM API enabled, and the screen must be showing Home Assistant.",
         "data": {
           "ai_enabled": "Enable AI recipe features",
           "ai_text_entity": "AI Task entity for recipe text",
           "ai_image_entity": "AI Task entity for recipe images (optional)",
           "voice_enabled": "Enable voice input (speech to text)",
-          "voice_pipeline": "Assist pipeline for voice input (optional)"
+          "voice_pipeline": "Assist pipeline for voice input (optional)",
+          "voice_display_satellites": "Voice satellites that can show recipes on their screen"
         }
       }
     }

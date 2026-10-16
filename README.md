@@ -72,6 +72,7 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
 - **A configurable dashboard card** with its own visual editor — meal plan, random recipes, a "surprise me" picker, the AI recipe generator, or recipe search, each launching straight into the full panel — see [Dashboard Card](#dashboard-card) below
 - **AI recipe finder**: generate a recipe from a text description, or import one from a photo and/or pasted text, using your own Home Assistant `ai_task.*` entities. Past AI recipes are kept automatically so you can save the keepers later — see [AI Recipe Finder](#ai-recipe-finder) below
 - **Voice input** (optional): a microphone button in the recipe search box, the AI prompt and the dashboard card, transcribing speech with a speech-to-text engine you've already configured in Home Assistant — see [Voice Input](#voice-input) below
+- **Ask a voice assistant for a recipe** (optional): say "show me a recipe for fried chicken" to a voice satellite with a screen, and the recipes open on that screen — see [Ask For A Recipe By Voice](#ask-for-a-recipe-by-voice) below
 - AI tasks can be disabled and removed form the interface for those who dont want that capability
 
 ## Installation
@@ -200,6 +201,49 @@ Voice input is **off by default**, because it needs microphone permission on the
 - **Pick a general-purpose engine.** Whisper-based engines (e.g. the Faster Whisper add-on) and cloud engines transcribe free-form speech, which is what recipe names need. **Speech-to-Phrase only recognises pre-defined phrases** and will return nonsense for "chicken and chorizo paella" — don't choose a pipeline that uses it.
 - **Microphone access needs a secure context.** Over HTTPS (or `localhost`) browsers are fine. The Home Assistant companion app and kiosk browsers such as Fully Kiosk each need microphone permission granted to the app itself in your device's settings; without it the button reports that access was blocked.
 - The button hides itself entirely when voice input is switched off, when the page isn't a secure context, or when the device has no microphone — so you never get a mic button that can't work.
+
+## Ask For A Recipe By Voice
+
+With a voice satellite that also has a screen (a tablet running [kiosk-satellite](https://github.com/jxlarrea/kiosk-satellite) or the [voice satellite card](https://github.com/jxlarrea/voice-satellite-card-integration), the Home Assistant companion app, Fully Kiosk, or just a browser), you can ask for a recipe out loud and have it appear **on the screen you asked from**:
+
+> "Show me a recipe for fried chicken"
+> "Show me my favourite pizza dough recipe"
+> "Give me a pizza dough recipe from Taste"
+
+The assistant answers with what it's showing ("Showing pizza dough recipes from TasteAU"), the search results open over whatever the screen was displaying, and closing them returns it to exactly where it was.
+
+### How the request is understood
+
+There are no sentence templates to learn or maintain. The add-on registers a `MealieShowRecipe` intent and exposes it to Home Assistant's [LLM tool API](https://www.home-assistant.io/integrations/conversation/) — so any assistant whose conversation agent has the **Assist** LLM API enabled (OpenAI, Anthropic Claude, Ollama, …) can call it, and the model works out the phrasing. The tool is described to the model with **your own cookbook names included**, which is what lets a half-remembered name land on the right collection:
+
+| What you say | Where it searches |
+|---|---|
+| "my favourite pizza dough", "a favourite…" | your **Favorites** cookbook |
+| "my pizza dough", "mine", "my own", "my saved" | your **My Recipes** cookbook |
+| "…from Taste", "…from recipe tin", "…from bbc" | the closest-matching cookbook by name |
+| "a pizza dough recipe", "show me pizza dough" | everything |
+
+Cookbook names are matched generously — exactly, then by containment ("taste" → "TasteAU"), then by closest spelling — so a mangled transcription usually still lands. If a named cookbook can't be matched at all, it searches everything and says so rather than failing. If nothing matches the dish, it says that too instead of opening an empty screen.
+
+### Configuring it
+
+1. Make sure the assistant your satellite uses has an LLM conversation agent with the **Assist** API enabled (Settings → Devices & Services → your AI integration → the conversation entry → *Control Home Assistant*). The built-in non-LLM agent can't call tools, so this feature needs an LLM-backed pipeline.
+2. Settings → Devices & Services → **Mealie Kitchen Display** → **Configure**.
+3. Under **Voice satellites that can show recipes on their screen**, pick the satellites you want this for. Leaving it empty switches the feature off entirely — the tool isn't even described to the assistant.
+
+### Which screen it opens on
+
+The add-on fires an event; a small script it already loads on every Home Assistant page opens the panel. That's why it works the same in kiosk-satellite, the companion app, Fully Kiosk and a desktop browser.
+
+A screen that runs the voice satellite identifies itself automatically, so a tablet like the above needs no setup. To make a different screen answer a particular satellite's requests, visit this once on that screen:
+
+```
+/mealie-recipes?voice_screen=assist_satellite.kitchen_tablet
+```
+
+Visiting `/mealie-recipes?voice_screen=` (empty) clears it again.
+
+Two things worth knowing: the request is fire-and-forget, so if the screen is off or isn't showing Home Assistant the assistant will still say it's showing recipes; and a screen in a background tab deliberately ignores requests so it can't swallow one meant for the tablet in front of you.
 
 ## Development
 

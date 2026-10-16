@@ -138,8 +138,28 @@ export class MealieRecipePanel extends LitElement {
     const recipeSlug = params.get("recipe");
     const aiPrompt = params.get("ai_prompt");
     const search = params.get("search");
-    if (!recipeSlug && !aiPrompt && !search) return;
+    const cookbookName = params.get("cookbook");
+    const voiceScreen = params.get("voice_screen");
+    if (!recipeSlug && !aiPrompt && !search && voiceScreen === null) return;
     history.replaceState(null, "", location.pathname);
+
+    // Assigns this screen to a voice satellite, so "show me a recipe for…"
+    // spoken to that satellite opens recipes here. Only needed on a screen
+    // that isn't already running the satellite itself (which is detected
+    // automatically) — an empty value clears the assignment.
+    if (voiceScreen !== null) {
+      try {
+        if (voiceScreen) {
+          window.localStorage.setItem("mealie-voice-screen", voiceScreen);
+          this.error = `This screen will now show recipes asked for on ${voiceScreen}.`;
+        } else {
+          window.localStorage.removeItem("mealie-voice-screen");
+          this.error = "This screen no longer answers voice recipe requests.";
+        }
+      } catch {
+        this.error = "This browser won't let the add-on remember this screen's setting.";
+      }
+    }
 
     if (recipeSlug) {
       this.openRecipe(recipeSlug);
@@ -151,8 +171,33 @@ export class MealieRecipePanel extends LitElement {
       }
     } else if (search) {
       this.searchQuery = search;
+      // A voice request can scope the search to a cookbook by name ("my
+      // favourite pizza dough"). Cookbooks may still be loading, so the name
+      // is matched to an id as soon as the list arrives.
+      if (cookbookName) {
+        this.pendingCookbookName = cookbookName;
+        this.applyPendingCookbook();
+      }
       this.loadRecipes(search);
     }
+  }
+
+  // Cookbook ids aren't known until loadCookbooks() resolves, so a name from
+  // a deep link waits here until it can be matched.
+  private pendingCookbookName: string | null = null;
+
+  private applyPendingCookbook() {
+    if (!this.pendingCookbookName || !this.cookbooks.length) return;
+    const wanted = this.pendingCookbookName.toLowerCase();
+    // The voice intent resolves the spoken cookbook to an id server-side;
+    // a name is still accepted so the link stays readable/hand-writable.
+    const match = this.cookbooks.find(
+      (cb) => cb.id === this.pendingCookbookName || cb.name.toLowerCase() === wanted
+    );
+    this.pendingCookbookName = null;
+    if (!match) return;
+    this.selectedCookbook = match.id;
+    this.loadRecipes(this.searchQuery);
   }
 
   private async loadConfig() {
@@ -170,22 +215,34 @@ export class MealieRecipePanel extends LitElement {
     try {
       const result = await this.client.getCookbooks();
       this.cookbooks = result.items;
+      this.applyPendingCookbook();
     } catch (e) {
       // Non-fatal: the selector just won't offer any cookbooks beyond "All".
     }
   }
 
+  // Bumped per request so a slower earlier response can't overwrite a newer
+  // one. This matters for deep links (a voice "show me fried chicken" or a
+  // dashboard card hand-off): the panel's own unfiltered first load is
+  // already in flight when the deep-linked search starts, and the full
+  // recipe list usually takes longer to come back than a filtered search —
+  // so without this it lands last and the user sees every recipe.
+  private recipeRequestId = 0;
+
   private async loadRecipes(search = "") {
     if (!this.client) return;
+    const requestId = ++this.recipeRequestId;
     this.loading = true;
     this.error = "";
     try {
       const result = await this.client.searchRecipes({ search, cookbook: this.selectedCookbook || undefined });
+      if (requestId !== this.recipeRequestId) return;
       this.recipes = result.items;
     } catch (e) {
+      if (requestId !== this.recipeRequestId) return;
       this.error = await describeError(e, "Failed to load recipes");
     } finally {
-      this.loading = false;
+      if (requestId === this.recipeRequestId) this.loading = false;
     }
   }
 

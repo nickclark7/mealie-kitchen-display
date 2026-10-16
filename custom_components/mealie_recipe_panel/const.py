@@ -18,6 +18,18 @@ CONF_VOICE_ENABLED = "voice_enabled"
 # own preferred pipeline.
 CONF_VOICE_PIPELINE = "voice_pipeline"
 
+# Voice satellites allowed to show recipes on their own screen when asked
+# ("show me a recipe for fried chicken"). Empty/unset disables the feature.
+CONF_VOICE_DISPLAY_SATELLITES = "voice_display_satellites"
+# Fired when a satellite asks for recipes to be shown; the frontend module
+# loaded on every HA page picks it up and opens the panel overlay.
+EVENT_SHOW = f"{DOMAIN}_show"
+
+# Cookbooks this integration creates and maintains itself, mirrored by the
+# "Favorite"/"My Recipe" tags.
+FAVORITES_COOKBOOK_NAME = "Favorites"
+MY_RECIPES_COOKBOOK_NAME = "My Recipes"
+
 API_URL_BASE = f"/api/{DOMAIN}"
 STATIC_URL_BASE = f"/{DOMAIN}_static"
 PANEL_URL_PATH = "mealie-recipes"

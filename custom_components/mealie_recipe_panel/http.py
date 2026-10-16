@@ -21,6 +21,8 @@ from homeassistant.helpers.network import get_url
 from .ai_history import get_history
 from .const import (
     API_URL_BASE,
+    FAVORITES_COOKBOOK_NAME,
+    MY_RECIPES_COOKBOOK_NAME,
     CONF_AI_ENABLED,
     CONF_AI_IMAGE_ENTITY,
     CONF_AI_TEXT_ENTITY,
@@ -39,9 +41,7 @@ _ALLOWED_IMAGE_SIZES = {"tiny-original", "min-original", "original"}
 _VALID_ENTRY_TYPES = {"breakfast", "lunch", "dinner", "side", "snack", "drink", "dessert"}
 _RANDOM_MODES = {"all", "my-recipes", "favorites", "made-before"}
 FAVORITE_TAG_NAME = "Favorite"
-FAVORITES_COOKBOOK_NAME = "Favorites"
 MY_RECIPE_TAG_NAME = "My Recipe"
-MY_RECIPES_COOKBOOK_NAME = "My Recipes"
 
 
 class MealieProxyView(HomeAssistantView):

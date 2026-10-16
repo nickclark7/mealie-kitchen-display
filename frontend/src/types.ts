@@ -5,6 +5,7 @@ export interface HomeAssistant {
   // frames on the same socket the subscription was made on.
   connection: {
     subscribeMessage<T>(callback: (message: T) => void, subscribeMessage: unknown): Promise<() => void>;
+    subscribeEvents<T>(callback: (event: T) => void, eventType: string): Promise<() => void>;
     socket?: WebSocket;
   };
 }

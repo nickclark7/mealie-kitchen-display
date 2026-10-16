@@ -10,6 +10,7 @@ const result = await esbuild.build({
     "src/mealie-launcher-card.ts",
     "src/mealie-dashboard-card.ts",
     "src/mealie-loader.ts",
+    "src/mealie-voice-display.ts",
   ],
   bundle: true,
   format: "esm",

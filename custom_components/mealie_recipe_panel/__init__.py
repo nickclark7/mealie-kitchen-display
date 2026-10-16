@@ -13,6 +13,8 @@ from homeassistant.core import HomeAssistant
 from .ai_history import AiHistory
 from .const import DOMAIN, PANEL_URL_PATH, STATIC_URL_BASE
 from .http import VIEWS
+from .intent import async_register_intents
+from .mealie_api import MealieUnavailable, async_get_cookbooks
 
 WWW_DIR = pathlib.Path(__file__).parent / "www"
 
@@ -76,12 +78,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # hang for the bug to resurface. The card modules guard their own
         # customElements.define() so it's harmless if both copies succeed.
         loader_url = await _versioned_url(hass, "mealie-loader.js")
-        launcher_url = await _versioned_url(hass, "mealie-launcher-card.js")
-        dashboard_url = await _versioned_url(hass, "mealie-dashboard-card.js")
-        targets = f"target={quote(launcher_url, safe='')}&target={quote(dashboard_url, safe='')}"
+        # mealie-voice-display.js listens for the show-recipe event on every
+        # page, so a spoken request can open the panel over whatever the
+        # screen happens to be showing — it needs no card on the dashboard.
+        target_files = (
+            "mealie-launcher-card.js",
+            "mealie-dashboard-card.js",
+            "mealie-voice-display.js",
+        )
+        # A list comprehension, not a generator: `await` inside a genexp makes
+        # it an async generator, which str.join can't consume.
+        targets = "&".join(
+            [
+                f"target={quote(await _versioned_url(hass, name), safe='')}"
+                for name in target_files
+            ]
+        )
         add_extra_js_url(hass, f"{loader_url}&copy=1&{targets}")
         add_extra_js_url(hass, f"{loader_url}&copy=2&{targets}")
+        async_register_intents(hass)
         hass.data[DOMAIN]["_views_registered"] = True
+
+    # Warms the cookbook list the voice intent describes to the LLM. Done as a
+    # background task because Mealie may be slow or down, and nothing else
+    # here should wait on it.
+    async def _warm_cookbooks(_now=None) -> None:
+        try:
+            await async_get_cookbooks(hass, force=True)
+        except MealieUnavailable:
+            pass
+
+    hass.async_create_task(_warm_cookbooks())
 
     return True
 
