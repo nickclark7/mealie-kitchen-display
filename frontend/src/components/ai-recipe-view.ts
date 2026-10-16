@@ -1,6 +1,7 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { AiHistoryEntry } from "../types";
+import type { AiHistoryEntry, HomeAssistant } from "../types";
+import "./voice-input-button";
 
 function relativeDate(iso: string): string {
   const then = new Date(iso);
@@ -18,11 +19,17 @@ export class AiRecipeView extends LitElement {
   @property({ type: Boolean }) importing = false;
   @property({ type: String }) error = "";
   @property({ type: Boolean }) aiConfigured = true;
+  @property({ attribute: false }) hass?: HomeAssistant;
+  // Speech input: off unless enabled in the integration's options. null
+  // pipeline means Home Assistant's preferred one.
+  @property({ type: Boolean }) voiceEnabled = false;
+  @property({ attribute: false }) voicePipeline: string | null = null;
   @property({ attribute: false }) history: AiHistoryEntry[] = [];
   @property({ type: Boolean }) historyLoading = false;
   @property({ attribute: false }) historyImageUrl: (entry: AiHistoryEntry) => string = () => "";
 
   @state() private tab: "generate" | "import" | "history" = "generate";
+  @state() private voiceState: "idle" | "listening" | "transcribing" = "idle";
   @state() private importText = "";
   @state() private importImage: File | null = null;
   @state() private importImagePreview: string | null = null;
@@ -95,6 +102,19 @@ export class AiRecipeView extends LitElement {
       color: var(--error-color, #db4437);
       font-size: 14px;
       margin-top: 12px;
+    }
+    /* The mic sits inside the field rather than beside it, so there's one
+       control instead of two competing ones. */
+    .prompt-wrap {
+      position: relative;
+    }
+    .prompt-wrap.has-voice textarea {
+      padding-right: 52px;
+    }
+    .prompt-wrap mealie-voice-button {
+      position: absolute;
+      top: 8px;
+      right: 8px;
     }
     .photo-picker {
       display: block;
@@ -282,14 +302,37 @@ export class AiRecipeView extends LitElement {
     );
   }
 
+  // Dictated text fills the box without generating, so a misheard prompt
+  // doesn't spend an AI call — the user presses Generate themselves.
+  private onVoiceText(e: CustomEvent<{ text: string }>) {
+    this.dispatchEvent(new CustomEvent("prompt-change", { detail: { value: e.detail.text } }));
+  }
+
   private renderGenerateTab() {
     return html`
       <p class="intro">Describe what you're after — as specific as you like.</p>
-      <textarea
-        placeholder="e.g. a thick and crispy pizza dough recipe"
-        .value=${this.prompt}
-        @input=${this.onPromptInput}
-      ></textarea>
+      <div class="prompt-wrap ${this.voiceEnabled ? "has-voice" : ""}">
+        <textarea
+          placeholder=${this.voiceState === "listening"
+            ? "Listening…"
+            : this.voiceState === "transcribing"
+              ? "Transcribing…"
+              : "e.g. a thick and crispy pizza dough recipe"}
+          .value=${this.prompt}
+          @input=${this.onPromptInput}
+        ></textarea>
+        ${this.voiceEnabled
+          ? html`<mealie-voice-button
+              .hass=${this.hass}
+              .pipelineId=${this.voicePipeline}
+              .disabled=${this.generating}
+              label="Dictate a recipe request"
+              @voice-text=${this.onVoiceText}
+              @voice-state=${(e: CustomEvent<{ state: "idle" | "listening" | "transcribing" }>) =>
+                (this.voiceState = e.detail.state)}
+            ></mealie-voice-button>`
+          : nothing}
+      </div>
       <button class="generate" ?disabled=${this.generating || !this.prompt.trim()} @click=${this.onGenerate}>
         ${this.generating ? "Generating…" : "✨ Generate Recipe"}
       </button>

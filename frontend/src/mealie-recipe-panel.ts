@@ -60,7 +60,12 @@ export class MealieRecipePanel extends LitElement {
   @state() private cookbooks: Cookbook[] = [];
   // Optimistic defaults: assume AI is available until loadConfig() resolves,
   // so the header button doesn't flash away and back on every load.
-  @state() private panelConfig: PanelConfig = { aiEnabled: true, aiConfigured: true };
+  @state() private panelConfig: PanelConfig = {
+    aiEnabled: true,
+    aiConfigured: true,
+    voiceEnabled: false,
+    voicePipeline: null,
+  };
   @state() private selectedCookbook = "";
   @state() private error = "";
   @state() private showMealplanDialog = false;
@@ -872,6 +877,10 @@ export class MealieRecipePanel extends LitElement {
             .importing=${this.aiImporting}
             .error=${this.aiError}
             .aiConfigured=${this.panelConfig.aiConfigured}
+            .hass=${this.hass}
+            .voiceEnabled=${this.panelConfig.voiceEnabled}
+            .voicePipeline=${this.panelConfig.voicePipeline}
+            @voice-error=${(e: CustomEvent<{ message: string }>) => (this.aiError = e.detail.message)}
             @prompt-change=${(e: CustomEvent<{ value: string }>) => (this.aiPrompt = e.detail.value)}
             @generate=${() => this.onAiGenerate()}
             @import=${(e: CustomEvent<{ text: string; image: File | null }>) => this.onAiImport(e)}
@@ -937,7 +946,14 @@ export class MealieRecipePanel extends LitElement {
           @cancel=${() => (this.showRandomPicker = false)}
         ></random-picker-dialog>
         <div style="display:flex;flex-wrap:wrap;gap:12px;padding:8px 16px;">
-          <recipe-search-bar .value=${this.searchQuery} @search-change=${this.onSearchChange}></recipe-search-bar>
+          <recipe-search-bar
+            .value=${this.searchQuery}
+            .hass=${this.hass}
+            .voiceEnabled=${this.panelConfig.voiceEnabled}
+            .voicePipeline=${this.panelConfig.voicePipeline}
+            @search-change=${this.onSearchChange}
+            @voice-error=${(e: CustomEvent<{ message: string }>) => (this.error = e.detail.message)}
+          ></recipe-search-bar>
           <cookbook-select
             .cookbooks=${this.cookbooks}
             .value=${this.selectedCookbook}

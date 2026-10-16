@@ -1,6 +1,6 @@
-var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t,i)=>{for(var r=i>1?void 0:i?Ue(e,t):e,n=s.length-1,a;n>=0;n--)(a=s[n])&&(r=(i?a(e,t,r):a(r))||r);return i&&r&&Me(e,t,r),r};var q=globalThis,G=q.ShadowRoot&&(q.ShadyCSS===void 0||q.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,Q=Symbol(),he=new WeakMap,L=class{constructor(e,t,i){if(this._$cssResult$=!0,i!==Q)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=e,this.t=t}get styleSheet(){let e=this.o,t=this.t;if(G&&e===void 0){let i=t!==void 0&&t.length===1;i&&(e=he.get(t)),e===void 0&&((this.o=e=new CSSStyleSheet).replaceSync(this.cssText),i&&he.set(t,e))}return e}toString(){return this.cssText}},ue=s=>new L(typeof s=="string"?s:s+"",void 0,Q),E=(s,...e)=>{let t=s.length===1?s[0]:e.reduce((i,r,n)=>i+(a=>{if(a._$cssResult$===!0)return a.cssText;if(typeof a=="number")return a;throw Error("Value passed to 'css' function must be a 'css' function result: "+a+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(r)+s[n+1],s[0]);return new L(t,s,Q)},me=(s,e)=>{if(G)s.adoptedStyleSheets=e.map(t=>t instanceof CSSStyleSheet?t:t.styleSheet);else for(let t of e){let i=document.createElement("style"),r=q.litNonce;r!==void 0&&i.setAttribute("nonce",r),i.textContent=t.cssText,s.appendChild(i)}},Y=G?s=>s:s=>s instanceof CSSStyleSheet?(e=>{let t="";for(let i of e.cssRules)t+=i.cssText;return ue(t)})(s):s;var{is:Le,defineProperty:He,getOwnPropertyDescriptor:Oe,getOwnPropertyNames:De,getOwnPropertySymbols:ze,getPrototypeOf:Ne}=Object,B=globalThis,ge=B.trustedTypes,Ie=ge?ge.emptyScript:"",Fe=B.reactiveElementPolyfillSupport,H=(s,e)=>s,O={toAttribute(s,e){switch(e){case Boolean:s=s?Ie:null;break;case Object:case Array:s=s==null?s:JSON.stringify(s)}return s},fromAttribute(s,e){let t=s;switch(e){case Boolean:t=s!==null;break;case Number:t=s===null?null:Number(s);break;case Object:case Array:try{t=JSON.parse(s)}catch{t=null}}return t}},W=(s,e)=>!Le(s,e),fe={attribute:!0,type:String,converter:O,reflect:!1,useDefault:!1,hasChanged:W};Symbol.metadata??=Symbol("metadata"),B.litPropertyMetadata??=new WeakMap;var $=class extends HTMLElement{static addInitializer(e){this._$Ei(),(this.l??=[]).push(e)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(e,t=fe){if(t.state&&(t.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(e)&&((t=Object.create(t)).wrapped=!0),this.elementProperties.set(e,t),!t.noAccessor){let i=Symbol(),r=this.getPropertyDescriptor(e,i,t);r!==void 0&&He(this.prototype,e,r)}}static getPropertyDescriptor(e,t,i){let{get:r,set:n}=Oe(this.prototype,e)??{get(){return this[t]},set(a){this[t]=a}};return{get:r,set(a){let d=r?.call(this);n?.call(this,a),this.requestUpdate(e,d,i)},configurable:!0,enumerable:!0}}static getPropertyOptions(e){return this.elementProperties.get(e)??fe}static _$Ei(){if(this.hasOwnProperty(H("elementProperties")))return;let e=Ne(this);e.finalize(),e.l!==void 0&&(this.l=[...e.l]),this.elementProperties=new Map(e.elementProperties)}static finalize(){if(this.hasOwnProperty(H("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(H("properties"))){let t=this.properties,i=[...De(t),...ze(t)];for(let r of i)this.createProperty(r,t[r])}let e=this[Symbol.metadata];if(e!==null){let t=litPropertyMetadata.get(e);if(t!==void 0)for(let[i,r]of t)this.elementProperties.set(i,r)}this._$Eh=new Map;for(let[t,i]of this.elementProperties){let r=this._$Eu(t,i);r!==void 0&&this._$Eh.set(r,t)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(e){let t=[];if(Array.isArray(e)){let i=new Set(e.flat(1/0).reverse());for(let r of i)t.unshift(Y(r))}else e!==void 0&&t.push(Y(e));return t}static _$Eu(e,t){let i=t.attribute;return i===!1?void 0:typeof i=="string"?i:typeof e=="string"?e.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(e=>this.enableUpdating=e),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(e=>e(this))}addController(e){(this._$EO??=new Set).add(e),this.renderRoot!==void 0&&this.isConnected&&e.hostConnected?.()}removeController(e){this._$EO?.delete(e)}_$E_(){let e=new Map,t=this.constructor.elementProperties;for(let i of t.keys())this.hasOwnProperty(i)&&(e.set(i,this[i]),delete this[i]);e.size>0&&(this._$Ep=e)}createRenderRoot(){let e=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return me(e,this.constructor.elementStyles),e}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(e=>e.hostConnected?.())}enableUpdating(e){}disconnectedCallback(){this._$EO?.forEach(e=>e.hostDisconnected?.())}attributeChangedCallback(e,t,i){this._$AK(e,i)}_$ET(e,t){let i=this.constructor.elementProperties.get(e),r=this.constructor._$Eu(e,i);if(r!==void 0&&i.reflect===!0){let n=(i.converter?.toAttribute!==void 0?i.converter:O).toAttribute(t,i.type);this._$Em=e,n==null?this.removeAttribute(r):this.setAttribute(r,n),this._$Em=null}}_$AK(e,t){let i=this.constructor,r=i._$Eh.get(e);if(r!==void 0&&this._$Em!==r){let n=i.getPropertyOptions(r),a=typeof n.converter=="function"?{fromAttribute:n.converter}:n.converter?.fromAttribute!==void 0?n.converter:O;this._$Em=r;let d=a.fromAttribute(t,n.type);this[r]=d??this._$Ej?.get(r)??d,this._$Em=null}}requestUpdate(e,t,i,r=!1,n){if(e!==void 0){let a=this.constructor;if(r===!1&&(n=this[e]),i??=a.getPropertyOptions(e),!((i.hasChanged??W)(n,t)||i.useDefault&&i.reflect&&n===this._$Ej?.get(e)&&!this.hasAttribute(a._$Eu(e,i))))return;this.C(e,t,i)}this.isUpdatePending===!1&&(this._$ES=this._$EP())}C(e,t,{useDefault:i,reflect:r,wrapped:n},a){i&&!(this._$Ej??=new Map).has(e)&&(this._$Ej.set(e,a??t??this[e]),n!==!0||a!==void 0)||(this._$AL.has(e)||(this.hasUpdated||i||(t=void 0),this._$AL.set(e,t)),r===!0&&this._$Em!==e&&(this._$Eq??=new Set).add(e))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(t){Promise.reject(t)}let e=this.scheduleUpdate();return e!=null&&await e,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[r,n]of this._$Ep)this[r]=n;this._$Ep=void 0}let i=this.constructor.elementProperties;if(i.size>0)for(let[r,n]of i){let{wrapped:a}=n,d=this[r];a!==!0||this._$AL.has(r)||d===void 0||this.C(r,void 0,n,d)}}let e=!1,t=this._$AL;try{e=this.shouldUpdate(t),e?(this.willUpdate(t),this._$EO?.forEach(i=>i.hostUpdate?.()),this.update(t)):this._$EM()}catch(i){throw e=!1,this._$EM(),i}e&&this._$AE(t)}willUpdate(e){}_$AE(e){this._$EO?.forEach(t=>t.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(e)),this.updated(e)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(e){return!0}update(e){this._$Eq&&=this._$Eq.forEach(t=>this._$ET(t,this[t])),this._$EM()}updated(e){}firstUpdated(e){}};$.elementStyles=[],$.shadowRootOptions={mode:"open"},$[H("elementProperties")]=new Map,$[H("finalized")]=new Map,Fe?.({ReactiveElement:$}),(B.reactiveElementVersions??=[]).push("2.1.2");var se=globalThis,ye=s=>s,J=se.trustedTypes,ve=J?J.createPolicy("lit-html",{createHTML:s=>s}):void 0,Ae="$lit$",A=`lit$${Math.random().toFixed(9).slice(2)}$`,we="?"+A,je=`<${we}>`,R=document,z=()=>R.createComment(""),N=s=>s===null||typeof s!="object"&&typeof s!="function",ne=Array.isArray,qe=s=>ne(s)||typeof s?.[Symbol.iterator]=="function",Z=`[ 	
-\f\r]`,D=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,be=/-->/g,$e=/>/g,S=RegExp(`>|${Z}(?:([^\\s"'>=/]+)(${Z}*=${Z}*(?:[^ 	
-\f\r"'\`<>=]|("|')|))|$)`,"g"),xe=/'/g,_e=/"/g,Se=/^(?:script|style|textarea|title)$/i,ae=s=>(e,...t)=>({_$litType$:s,strings:e,values:t}),o=ae(1),rt=ae(2),st=ae(3),P=Symbol.for("lit-noChange"),c=Symbol.for("lit-nothing"),Ee=new WeakMap,k=R.createTreeWalker(R,129);function ke(s,e){if(!ne(s)||!s.hasOwnProperty("raw"))throw Error("invalid template strings array");return ve!==void 0?ve.createHTML(e):e}var Ge=(s,e)=>{let t=s.length-1,i=[],r,n=e===2?"<svg>":e===3?"<math>":"",a=D;for(let d=0;d<t;d++){let l=s[d],g,f,h=-1,b=0;for(;b<l.length&&(a.lastIndex=b,f=a.exec(l),f!==null);)b=a.lastIndex,a===D?f[1]==="!--"?a=be:f[1]!==void 0?a=$e:f[2]!==void 0?(Se.test(f[2])&&(r=RegExp("</"+f[2],"g")),a=S):f[3]!==void 0&&(a=S):a===S?f[0]===">"?(a=r??D,h=-1):f[1]===void 0?h=-2:(h=a.lastIndex-f[2].length,g=f[1],a=f[3]===void 0?S:f[3]==='"'?_e:xe):a===_e||a===xe?a=S:a===be||a===$e?a=D:(a=S,r=void 0);let _=a===S&&s[d+1].startsWith("/>")?" ":"";n+=a===D?l+je:h>=0?(i.push(g),l.slice(0,h)+Ae+l.slice(h)+A+_):l+A+(h===-2?d:_)}return[ke(s,n+(s[t]||"<?>")+(e===2?"</svg>":e===3?"</math>":"")),i]},I=class s{constructor({strings:e,_$litType$:t},i){let r;this.parts=[];let n=0,a=0,d=e.length-1,l=this.parts,[g,f]=Ge(e,t);if(this.el=s.createElement(g,i),k.currentNode=this.el.content,t===2||t===3){let h=this.el.content.firstChild;h.replaceWith(...h.childNodes)}for(;(r=k.nextNode())!==null&&l.length<d;){if(r.nodeType===1){if(r.hasAttributes())for(let h of r.getAttributeNames())if(h.endsWith(Ae)){let b=f[a++],_=r.getAttribute(h).split(A),j=/([.?@])?(.*)/.exec(b);l.push({type:1,index:n,name:j[2],strings:_,ctor:j[1]==="."?ee:j[1]==="?"?te:j[1]==="@"?ie:M}),r.removeAttribute(h)}else h.startsWith(A)&&(l.push({type:6,index:n}),r.removeAttribute(h));if(Se.test(r.tagName)){let h=r.textContent.split(A),b=h.length-1;if(b>0){r.textContent=J?J.emptyScript:"";for(let _=0;_<b;_++)r.append(h[_],z()),k.nextNode(),l.push({type:2,index:++n});r.append(h[b],z())}}}else if(r.nodeType===8)if(r.data===we)l.push({type:2,index:n});else{let h=-1;for(;(h=r.data.indexOf(A,h+1))!==-1;)l.push({type:7,index:n}),h+=A.length-1}n++}}static createElement(e,t){let i=R.createElement("template");return i.innerHTML=e,i}};function C(s,e,t=s,i){if(e===P)return e;let r=i!==void 0?t._$Co?.[i]:t._$Cl,n=N(e)?void 0:e._$litDirective$;return r?.constructor!==n&&(r?._$AO?.(!1),n===void 0?r=void 0:(r=new n(s),r._$AT(s,t,i)),i!==void 0?(t._$Co??=[])[i]=r:t._$Cl=r),r!==void 0&&(e=C(s,r._$AS(s,e.values),r,i)),e}var X=class{constructor(e,t){this._$AV=[],this._$AN=void 0,this._$AD=e,this._$AM=t}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(e){let{el:{content:t},parts:i}=this._$AD,r=(e?.creationScope??R).importNode(t,!0);k.currentNode=r;let n=k.nextNode(),a=0,d=0,l=i[0];for(;l!==void 0;){if(a===l.index){let g;l.type===2?g=new F(n,n.nextSibling,this,e):l.type===1?g=new l.ctor(n,l.name,l.strings,this,e):l.type===6&&(g=new re(n,this,e)),this._$AV.push(g),l=i[++d]}a!==l?.index&&(n=k.nextNode(),a++)}return k.currentNode=R,r}p(e){let t=0;for(let i of this._$AV)i!==void 0&&(i.strings!==void 0?(i._$AI(e,i,t),t+=i.strings.length-2):i._$AI(e[t])),t++}},F=class s{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(e,t,i,r){this.type=2,this._$AH=c,this._$AN=void 0,this._$AA=e,this._$AB=t,this._$AM=i,this.options=r,this._$Cv=r?.isConnected??!0}get parentNode(){let e=this._$AA.parentNode,t=this._$AM;return t!==void 0&&e?.nodeType===11&&(e=t.parentNode),e}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(e,t=this){e=C(this,e,t),N(e)?e===c||e==null||e===""?(this._$AH!==c&&this._$AR(),this._$AH=c):e!==this._$AH&&e!==P&&this._(e):e._$litType$!==void 0?this.$(e):e.nodeType!==void 0?this.T(e):qe(e)?this.k(e):this._(e)}O(e){return this._$AA.parentNode.insertBefore(e,this._$AB)}T(e){this._$AH!==e&&(this._$AR(),this._$AH=this.O(e))}_(e){this._$AH!==c&&N(this._$AH)?this._$AA.nextSibling.data=e:this.T(R.createTextNode(e)),this._$AH=e}$(e){let{values:t,_$litType$:i}=e,r=typeof i=="number"?this._$AC(e):(i.el===void 0&&(i.el=I.createElement(ke(i.h,i.h[0]),this.options)),i);if(this._$AH?._$AD===r)this._$AH.p(t);else{let n=new X(r,this),a=n.u(this.options);n.p(t),this.T(a),this._$AH=n}}_$AC(e){let t=Ee.get(e.strings);return t===void 0&&Ee.set(e.strings,t=new I(e)),t}k(e){ne(this._$AH)||(this._$AH=[],this._$AR());let t=this._$AH,i,r=0;for(let n of e)r===t.length?t.push(i=new s(this.O(z()),this.O(z()),this,this.options)):i=t[r],i._$AI(n),r++;r<t.length&&(this._$AR(i&&i._$AB.nextSibling,r),t.length=r)}_$AR(e=this._$AA.nextSibling,t){for(this._$AP?.(!1,!0,t);e!==this._$AB;){let i=ye(e).nextSibling;ye(e).remove(),e=i}}setConnected(e){this._$AM===void 0&&(this._$Cv=e,this._$AP?.(e))}},M=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(e,t,i,r,n){this.type=1,this._$AH=c,this._$AN=void 0,this.element=e,this.name=t,this._$AM=r,this.options=n,i.length>2||i[0]!==""||i[1]!==""?(this._$AH=Array(i.length-1).fill(new String),this.strings=i):this._$AH=c}_$AI(e,t=this,i,r){let n=this.strings,a=!1;if(n===void 0)e=C(this,e,t,0),a=!N(e)||e!==this._$AH&&e!==P,a&&(this._$AH=e);else{let d=e,l,g;for(e=n[0],l=0;l<n.length-1;l++)g=C(this,d[i+l],t,l),g===P&&(g=this._$AH[l]),a||=!N(g)||g!==this._$AH[l],g===c?e=c:e!==c&&(e+=(g??"")+n[l+1]),this._$AH[l]=g}a&&!r&&this.j(e)}j(e){e===c?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,e??"")}},ee=class extends M{constructor(){super(...arguments),this.type=3}j(e){this.element[this.name]=e===c?void 0:e}},te=class extends M{constructor(){super(...arguments),this.type=4}j(e){this.element.toggleAttribute(this.name,!!e&&e!==c)}},ie=class extends M{constructor(e,t,i,r,n){super(e,t,i,r,n),this.type=5}_$AI(e,t=this){if((e=C(this,e,t,0)??c)===P)return;let i=this._$AH,r=e===c&&i!==c||e.capture!==i.capture||e.once!==i.once||e.passive!==i.passive,n=e!==c&&(i===c||r);r&&this.element.removeEventListener(this.name,this,i),n&&this.element.addEventListener(this.name,this,e),this._$AH=e}handleEvent(e){typeof this._$AH=="function"?this._$AH.call(this.options?.host??this.element,e):this._$AH.handleEvent(e)}},re=class{constructor(e,t,i){this.element=e,this.type=6,this._$AN=void 0,this._$AM=t,this.options=i}get _$AU(){return this._$AM._$AU}_$AI(e){C(this,e)}};var Be=se.litHtmlPolyfillSupport;Be?.(I,F),(se.litHtmlVersions??=[]).push("3.3.3");var Re=(s,e,t)=>{let i=t?.renderBefore??e,r=i._$litPart$;if(r===void 0){let n=t?.renderBefore??null;i._$litPart$=r=new F(e.insertBefore(z(),n),n,void 0,t??{})}return r._$AI(s),r};var oe=globalThis,v=class extends ${constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let e=super.createRenderRoot();return this.renderOptions.renderBefore??=e.firstChild,e}update(e){let t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=Re(t,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return P}};v._$litElement$=!0,v.finalized=!0,oe.litElementHydrateSupport?.({LitElement:v});var We=oe.litElementPolyfillSupport;We?.({LitElement:v});(oe.litElementVersions??=[]).push("4.2.2");var Je={attribute:!0,type:String,converter:O,reflect:!1,hasChanged:W},Ve=(s=Je,e,t)=>{let{kind:i,metadata:r}=t,n=globalThis.litPropertyMetadata.get(r);if(n===void 0&&globalThis.litPropertyMetadata.set(r,n=new Map),i==="setter"&&((s=Object.create(s)).wrapped=!0),n.set(t.name,s),i==="accessor"){let{name:a}=t;return{set(d){let l=e.get.call(this);e.set.call(this,d),this.requestUpdate(a,l,s,!0,d)},init(d){return d!==void 0&&this.C(a,void 0,s,d),d}}}if(i==="setter"){let{name:a}=t;return function(d){let l=this[a];e.call(this,d),this.requestUpdate(a,l,s,!0,d)}}throw Error("Unsupported decorator location: "+i)};function y(s){return(e,t)=>typeof t=="object"?Ve(s,e,t):((i,r,n)=>{let a=r.hasOwnProperty(n);return r.constructor.createProperty(n,i),a?Object.getOwnPropertyDescriptor(r,n):void 0})(s,e,t)}function m(s){return y({...s,state:!0,attribute:!1})}var K=class{constructor(e){this.hass=e}async searchRecipes(e={}){let t=new URLSearchParams;t.set("page",String(e.page??1)),t.set("perPage",String(e.perPage??24)),e.search&&t.set("search",e.search),e.cookbook&&t.set("cookbook",e.cookbook);for(let i of e.categories??[])t.append("categories",i);for(let i of e.tags??[])t.append("tags",i);return this.hass.callApi("GET",`mealie_recipe_panel/recipes?${t.toString()}`)}async getCookbooks(){return this.hass.callApi("GET","mealie_recipe_panel/cookbooks")}async getConfig(){return this.hass.callApi("GET","mealie_recipe_panel/config")}async getRecipe(e){return this.hass.callApi("GET",`mealie_recipe_panel/recipes/${e}`)}async updateRecipe(e,t){return this.hass.callApi("POST",`mealie_recipe_panel/recipes/${e}`,t)}async getCategories(){return this.hass.callApi("GET","mealie_recipe_panel/categories")}async getTags(){return this.hass.callApi("GET","mealie_recipe_panel/tags")}recipeImageUrl(e,t="min-original"){return`/api/mealie_recipe_panel/image/${e}/${t}`}async setFavorite(e,t){return this.hass.callApi("PUT",`mealie_recipe_panel/recipes/${e}/favorite`,{favorite:t})}async setMyRecipe(e,t){return this.hass.callApi("PUT",`mealie_recipe_panel/recipes/${e}/my-recipe`,{my_recipe:t})}async addToMealplan(e,t,i){return this.hass.callApi("POST","mealie_recipe_panel/mealplans",{recipeId:e,date:t,entryType:i})}async addFreeformMealplanEntry(e,t,i){return this.hass.callApi("POST","mealie_recipe_panel/mealplans",{date:e,entryType:t,title:i})}async deleteMealplanEntry(e){return this.hass.callApi("DELETE",`mealie_recipe_panel/mealplans/${e}`)}async setLastMade(e,t){return this.hass.callApi("PUT",`mealie_recipe_panel/recipes/${e}/last-made`,{date:t})}async getShoppingLists(){return this.hass.callApi("GET","mealie_recipe_panel/shopping-lists")}async createShoppingList(e){return this.hass.callApi("POST","mealie_recipe_panel/shopping-lists",{name:e})}async addToShoppingList(e,t){return this.hass.callApi("POST","mealie_recipe_panel/shopping-items",{shoppingListId:e,items:t})}async getMealplans(e,t){return this.hass.callApi("GET",`mealie_recipe_panel/mealplans?start_date=${e}&end_date=${t}`)}async getRandomRecipe(e){return this.hass.callApi("GET",`mealie_recipe_panel/recipes/random?mode=${e}`)}async getRandomRecipes(e,t){let{recipes:i}=await this.hass.callApi("GET",`mealie_recipe_panel/recipes/random?mode=${e}&count=${t}`);return i}async deleteRecipe(e){return this.hass.callApi("DELETE",`mealie_recipe_panel/recipes/${e}`)}async getShoppingListDetail(e){return this.hass.callApi("GET",`mealie_recipe_panel/shopping-lists/${e}`)}async setShoppingItemChecked(e,t){return this.hass.callApi("PUT",`mealie_recipe_panel/shopping-items/${e}/checked`,{checked:t})}async deleteShoppingList(e){return this.hass.callApi("DELETE",`mealie_recipe_panel/shopping-lists/${e}`)}async generateRecipe(e){return this.hass.callApi("POST","mealie_recipe_panel/ai/generate-recipe",{prompt:e})}async saveGeneratedRecipe(e,t,i,r){return this.hass.callApi("POST","mealie_recipe_panel/ai/save-recipe",{recipe:e,imageBase64:t,imageMime:i,historyId:r})}async getAiHistory(){return this.hass.callApi("GET","mealie_recipe_panel/ai/history")}async deleteAiHistoryEntry(e){return this.hass.callApi("DELETE",`mealie_recipe_panel/ai/history/${e}`)}aiHistoryImageUrl(e){return`/api/mealie_recipe_panel/ai/history/${e}/image`}async importRecipe(e,t){let i=null,r=null;return t&&(i=await Ke(t),r=t.type||"image/jpeg"),this.hass.callApi("POST","mealie_recipe_panel/ai/import-recipe",{text:e,imageBase64:i,imageMime:r})}async generateRecipeImage(e,t,i){return this.hass.callApi("POST","mealie_recipe_panel/ai/generate-recipe-image",{subject:e,guidance:t,historyId:i})}async attachRecipeImage(e,t,i){return this.hass.callApi("POST",`mealie_recipe_panel/recipes/${e}/ai-image`,{imageBase64:t,imageMime:i})}};function Ke(s){return new Promise((e,t)=>{let i=new FileReader;i.onload=()=>{let r=i.result;e(r.slice(r.indexOf(",")+1))},i.onerror=()=>t(i.error),i.readAsDataURL(s)})}async function T(s,e){if(s instanceof Error&&s.message)return s.message;if(s&&typeof s=="object"){let t=s;if(typeof t.text=="function")try{let n=await t.text();if(n)return n}catch{}let i=s.message;if(typeof i=="string"&&i)return i;let r=s.status;if(typeof r=="number")return`Request failed (HTTP ${r})`}return e}function Pe(s){let e=s.getFullYear(),t=String(s.getMonth()+1).padStart(2,"0"),i=String(s.getDate()).padStart(2,"0");return`${e}-${t}-${i}`}function le(){return Pe(new Date)}function ce(s,e){let t=new Date(`${s}T00:00:00`);return t.setDate(t.getDate()+e),Pe(t)}var x=class extends v{constructor(){super(...arguments);this.open=!1;this.heading="Are you sure?";this.message="";this.confirmLabel="Confirm";this.destructive=!1}render(){return this.open?o`
+var Ue=Object.defineProperty;var He=Object.getOwnPropertyDescriptor;var c=(s,t,e,i)=>{for(var r=i>1?void 0:i?He(t,e):t,n=s.length-1,a;n>=0;n--)(a=s[n])&&(r=(i?a(t,e,r):a(r))||r);return i&&r&&Ue(t,e,r),r};var G=globalThis,B=G.ShadowRoot&&(G.ShadyCSS===void 0||G.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,Y=Symbol(),me=new WeakMap,H=class{constructor(t,e,i){if(this._$cssResult$=!0,i!==Y)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=t,this.t=e}get styleSheet(){let t=this.o,e=this.t;if(B&&t===void 0){let i=e!==void 0&&e.length===1;i&&(t=me.get(e)),t===void 0&&((this.o=t=new CSSStyleSheet).replaceSync(this.cssText),i&&me.set(e,t))}return t}toString(){return this.cssText}},ge=s=>new H(typeof s=="string"?s:s+"",void 0,Y),b=(s,...t)=>{let e=s.length===1?s[0]:t.reduce((i,r,n)=>i+(a=>{if(a._$cssResult$===!0)return a.cssText;if(typeof a=="number")return a;throw Error("Value passed to 'css' function must be a 'css' function result: "+a+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(r)+s[n+1],s[0]);return new H(e,s,Y)},fe=(s,t)=>{if(B)s.adoptedStyleSheets=t.map(e=>e instanceof CSSStyleSheet?e:e.styleSheet);else for(let e of t){let i=document.createElement("style"),r=G.litNonce;r!==void 0&&i.setAttribute("nonce",r),i.textContent=e.cssText,s.appendChild(i)}},Z=B?s=>s:s=>s instanceof CSSStyleSheet?(t=>{let e="";for(let i of t.cssRules)e+=i.cssText;return ge(e)})(s):s;var{is:Oe,defineProperty:De,getOwnPropertyDescriptor:Ie,getOwnPropertyNames:ze,getOwnPropertySymbols:Ne,getPrototypeOf:Fe}=Object,W=globalThis,ye=W.trustedTypes,je=ye?ye.emptyScript:"",qe=W.reactiveElementPolyfillSupport,O=(s,t)=>s,D={toAttribute(s,t){switch(t){case Boolean:s=s?je:null;break;case Object:case Array:s=s==null?s:JSON.stringify(s)}return s},fromAttribute(s,t){let e=s;switch(t){case Boolean:e=s!==null;break;case Number:e=s===null?null:Number(s);break;case Object:case Array:try{e=JSON.parse(s)}catch{e=null}}return e}},J=(s,t)=>!Oe(s,t),ve={attribute:!0,type:String,converter:D,reflect:!1,useDefault:!1,hasChanged:J};Symbol.metadata??=Symbol("metadata"),W.litPropertyMetadata??=new WeakMap;var $=class extends HTMLElement{static addInitializer(t){this._$Ei(),(this.l??=[]).push(t)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(t,e=ve){if(e.state&&(e.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(t)&&((e=Object.create(e)).wrapped=!0),this.elementProperties.set(t,e),!e.noAccessor){let i=Symbol(),r=this.getPropertyDescriptor(t,i,e);r!==void 0&&De(this.prototype,t,r)}}static getPropertyDescriptor(t,e,i){let{get:r,set:n}=Ie(this.prototype,t)??{get(){return this[e]},set(a){this[e]=a}};return{get:r,set(a){let d=r?.call(this);n?.call(this,a),this.requestUpdate(t,d,i)},configurable:!0,enumerable:!0}}static getPropertyOptions(t){return this.elementProperties.get(t)??ve}static _$Ei(){if(this.hasOwnProperty(O("elementProperties")))return;let t=Fe(this);t.finalize(),t.l!==void 0&&(this.l=[...t.l]),this.elementProperties=new Map(t.elementProperties)}static finalize(){if(this.hasOwnProperty(O("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(O("properties"))){let e=this.properties,i=[...ze(e),...Ne(e)];for(let r of i)this.createProperty(r,e[r])}let t=this[Symbol.metadata];if(t!==null){let e=litPropertyMetadata.get(t);if(e!==void 0)for(let[i,r]of e)this.elementProperties.set(i,r)}this._$Eh=new Map;for(let[e,i]of this.elementProperties){let r=this._$Eu(e,i);r!==void 0&&this._$Eh.set(r,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(t){let e=[];if(Array.isArray(t)){let i=new Set(t.flat(1/0).reverse());for(let r of i)e.unshift(Z(r))}else t!==void 0&&e.push(Z(t));return e}static _$Eu(t,e){let i=e.attribute;return i===!1?void 0:typeof i=="string"?i:typeof t=="string"?t.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(t=>this.enableUpdating=t),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(t=>t(this))}addController(t){(this._$EO??=new Set).add(t),this.renderRoot!==void 0&&this.isConnected&&t.hostConnected?.()}removeController(t){this._$EO?.delete(t)}_$E_(){let t=new Map,e=this.constructor.elementProperties;for(let i of e.keys())this.hasOwnProperty(i)&&(t.set(i,this[i]),delete this[i]);t.size>0&&(this._$Ep=t)}createRenderRoot(){let t=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return fe(t,this.constructor.elementStyles),t}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(t=>t.hostConnected?.())}enableUpdating(t){}disconnectedCallback(){this._$EO?.forEach(t=>t.hostDisconnected?.())}attributeChangedCallback(t,e,i){this._$AK(t,i)}_$ET(t,e){let i=this.constructor.elementProperties.get(t),r=this.constructor._$Eu(t,i);if(r!==void 0&&i.reflect===!0){let n=(i.converter?.toAttribute!==void 0?i.converter:D).toAttribute(e,i.type);this._$Em=t,n==null?this.removeAttribute(r):this.setAttribute(r,n),this._$Em=null}}_$AK(t,e){let i=this.constructor,r=i._$Eh.get(t);if(r!==void 0&&this._$Em!==r){let n=i.getPropertyOptions(r),a=typeof n.converter=="function"?{fromAttribute:n.converter}:n.converter?.fromAttribute!==void 0?n.converter:D;this._$Em=r;let d=a.fromAttribute(e,n.type);this[r]=d??this._$Ej?.get(r)??d,this._$Em=null}}requestUpdate(t,e,i,r=!1,n){if(t!==void 0){let a=this.constructor;if(r===!1&&(n=this[t]),i??=a.getPropertyOptions(t),!((i.hasChanged??J)(n,e)||i.useDefault&&i.reflect&&n===this._$Ej?.get(t)&&!this.hasAttribute(a._$Eu(t,i))))return;this.C(t,e,i)}this.isUpdatePending===!1&&(this._$ES=this._$EP())}C(t,e,{useDefault:i,reflect:r,wrapped:n},a){i&&!(this._$Ej??=new Map).has(t)&&(this._$Ej.set(t,a??e??this[t]),n!==!0||a!==void 0)||(this._$AL.has(t)||(this.hasUpdated||i||(e=void 0),this._$AL.set(t,e)),r===!0&&this._$Em!==t&&(this._$Eq??=new Set).add(t))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}let t=this.scheduleUpdate();return t!=null&&await t,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[r,n]of this._$Ep)this[r]=n;this._$Ep=void 0}let i=this.constructor.elementProperties;if(i.size>0)for(let[r,n]of i){let{wrapped:a}=n,d=this[r];a!==!0||this._$AL.has(r)||d===void 0||this.C(r,void 0,n,d)}}let t=!1,e=this._$AL;try{t=this.shouldUpdate(e),t?(this.willUpdate(e),this._$EO?.forEach(i=>i.hostUpdate?.()),this.update(e)):this._$EM()}catch(i){throw t=!1,this._$EM(),i}t&&this._$AE(e)}willUpdate(t){}_$AE(t){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(t)),this.updated(t)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(t){return!0}update(t){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(t){}firstUpdated(t){}};$.elementStyles=[],$.shadowRootOptions={mode:"open"},$[O("elementProperties")]=new Map,$[O("finalized")]=new Map,qe?.({ReactiveElement:$}),(W.reactiveElementVersions??=[]).push("2.1.2");var ne=globalThis,be=s=>s,V=ne.trustedTypes,xe=V?V.createPolicy("lit-html",{createHTML:s=>s}):void 0,Se="$lit$",A=`lit$${Math.random().toFixed(9).slice(2)}$`,ke="?"+A,Ge=`<${ke}>`,P=document,z=()=>P.createComment(""),N=s=>s===null||typeof s!="object"&&typeof s!="function",ae=Array.isArray,Be=s=>ae(s)||typeof s?.[Symbol.iterator]=="function",X=`[ 	
+\f\r]`,I=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,$e=/-->/g,_e=/>/g,k=RegExp(`>|${X}(?:([^\\s"'>=/]+)(${X}*=${X}*(?:[^ 	
+\f\r"'\`<>=]|("|')|))|$)`,"g"),Ee=/'/g,we=/"/g,Re=/^(?:script|style|textarea|title)$/i,oe=s=>(t,...e)=>({_$litType$:s,strings:t,values:e}),o=oe(1),lt=oe(2),ct=oe(3),T=Symbol.for("lit-noChange"),p=Symbol.for("lit-nothing"),Ae=new WeakMap,R=P.createTreeWalker(P,129);function Pe(s,t){if(!ae(s)||!s.hasOwnProperty("raw"))throw Error("invalid template strings array");return xe!==void 0?xe.createHTML(t):t}var We=(s,t)=>{let e=s.length-1,i=[],r,n=t===2?"<svg>":t===3?"<math>":"",a=I;for(let d=0;d<e;d++){let l=s[d],f,y,h=-1,x=0;for(;x<l.length&&(a.lastIndex=x,y=a.exec(l),y!==null);)x=a.lastIndex,a===I?y[1]==="!--"?a=$e:y[1]!==void 0?a=_e:y[2]!==void 0?(Re.test(y[2])&&(r=RegExp("</"+y[2],"g")),a=k):y[3]!==void 0&&(a=k):a===k?y[0]===">"?(a=r??I,h=-1):y[1]===void 0?h=-2:(h=a.lastIndex-y[2].length,f=y[1],a=y[3]===void 0?k:y[3]==='"'?we:Ee):a===we||a===Ee?a=k:a===$e||a===_e?a=I:(a=k,r=void 0);let w=a===k&&s[d+1].startsWith("/>")?" ":"";n+=a===I?l+Ge:h>=0?(i.push(f),l.slice(0,h)+Se+l.slice(h)+A+w):l+A+(h===-2?d:w)}return[Pe(s,n+(s[e]||"<?>")+(t===2?"</svg>":t===3?"</math>":"")),i]},F=class s{constructor({strings:t,_$litType$:e},i){let r;this.parts=[];let n=0,a=0,d=t.length-1,l=this.parts,[f,y]=We(t,e);if(this.el=s.createElement(f,i),R.currentNode=this.el.content,e===2||e===3){let h=this.el.content.firstChild;h.replaceWith(...h.childNodes)}for(;(r=R.nextNode())!==null&&l.length<d;){if(r.nodeType===1){if(r.hasAttributes())for(let h of r.getAttributeNames())if(h.endsWith(Se)){let x=y[a++],w=r.getAttribute(h).split(A),q=/([.?@])?(.*)/.exec(x);l.push({type:1,index:n,name:q[2],strings:w,ctor:q[1]==="."?te:q[1]==="?"?ie:q[1]==="@"?re:L}),r.removeAttribute(h)}else h.startsWith(A)&&(l.push({type:6,index:n}),r.removeAttribute(h));if(Re.test(r.tagName)){let h=r.textContent.split(A),x=h.length-1;if(x>0){r.textContent=V?V.emptyScript:"";for(let w=0;w<x;w++)r.append(h[w],z()),R.nextNode(),l.push({type:2,index:++n});r.append(h[x],z())}}}else if(r.nodeType===8)if(r.data===ke)l.push({type:2,index:n});else{let h=-1;for(;(h=r.data.indexOf(A,h+1))!==-1;)l.push({type:7,index:n}),h+=A.length-1}n++}}static createElement(t,e){let i=P.createElement("template");return i.innerHTML=t,i}};function M(s,t,e=s,i){if(t===T)return t;let r=i!==void 0?e._$Co?.[i]:e._$Cl,n=N(t)?void 0:t._$litDirective$;return r?.constructor!==n&&(r?._$AO?.(!1),n===void 0?r=void 0:(r=new n(s),r._$AT(s,e,i)),i!==void 0?(e._$Co??=[])[i]=r:e._$Cl=r),r!==void 0&&(t=M(s,r._$AS(s,t.values),r,i)),t}var ee=class{constructor(t,e){this._$AV=[],this._$AN=void 0,this._$AD=t,this._$AM=e}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(t){let{el:{content:e},parts:i}=this._$AD,r=(t?.creationScope??P).importNode(e,!0);R.currentNode=r;let n=R.nextNode(),a=0,d=0,l=i[0];for(;l!==void 0;){if(a===l.index){let f;l.type===2?f=new j(n,n.nextSibling,this,t):l.type===1?f=new l.ctor(n,l.name,l.strings,this,t):l.type===6&&(f=new se(n,this,t)),this._$AV.push(f),l=i[++d]}a!==l?.index&&(n=R.nextNode(),a++)}return R.currentNode=P,r}p(t){let e=0;for(let i of this._$AV)i!==void 0&&(i.strings!==void 0?(i._$AI(t,i,e),e+=i.strings.length-2):i._$AI(t[e])),e++}},j=class s{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(t,e,i,r){this.type=2,this._$AH=p,this._$AN=void 0,this._$AA=t,this._$AB=e,this._$AM=i,this.options=r,this._$Cv=r?.isConnected??!0}get parentNode(){let t=this._$AA.parentNode,e=this._$AM;return e!==void 0&&t?.nodeType===11&&(t=e.parentNode),t}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(t,e=this){t=M(this,t,e),N(t)?t===p||t==null||t===""?(this._$AH!==p&&this._$AR(),this._$AH=p):t!==this._$AH&&t!==T&&this._(t):t._$litType$!==void 0?this.$(t):t.nodeType!==void 0?this.T(t):Be(t)?this.k(t):this._(t)}O(t){return this._$AA.parentNode.insertBefore(t,this._$AB)}T(t){this._$AH!==t&&(this._$AR(),this._$AH=this.O(t))}_(t){this._$AH!==p&&N(this._$AH)?this._$AA.nextSibling.data=t:this.T(P.createTextNode(t)),this._$AH=t}$(t){let{values:e,_$litType$:i}=t,r=typeof i=="number"?this._$AC(t):(i.el===void 0&&(i.el=F.createElement(Pe(i.h,i.h[0]),this.options)),i);if(this._$AH?._$AD===r)this._$AH.p(e);else{let n=new ee(r,this),a=n.u(this.options);n.p(e),this.T(a),this._$AH=n}}_$AC(t){let e=Ae.get(t.strings);return e===void 0&&Ae.set(t.strings,e=new F(t)),e}k(t){ae(this._$AH)||(this._$AH=[],this._$AR());let e=this._$AH,i,r=0;for(let n of t)r===e.length?e.push(i=new s(this.O(z()),this.O(z()),this,this.options)):i=e[r],i._$AI(n),r++;r<e.length&&(this._$AR(i&&i._$AB.nextSibling,r),e.length=r)}_$AR(t=this._$AA.nextSibling,e){for(this._$AP?.(!1,!0,e);t!==this._$AB;){let i=be(t).nextSibling;be(t).remove(),t=i}}setConnected(t){this._$AM===void 0&&(this._$Cv=t,this._$AP?.(t))}},L=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(t,e,i,r,n){this.type=1,this._$AH=p,this._$AN=void 0,this.element=t,this.name=e,this._$AM=r,this.options=n,i.length>2||i[0]!==""||i[1]!==""?(this._$AH=Array(i.length-1).fill(new String),this.strings=i):this._$AH=p}_$AI(t,e=this,i,r){let n=this.strings,a=!1;if(n===void 0)t=M(this,t,e,0),a=!N(t)||t!==this._$AH&&t!==T,a&&(this._$AH=t);else{let d=t,l,f;for(t=n[0],l=0;l<n.length-1;l++)f=M(this,d[i+l],e,l),f===T&&(f=this._$AH[l]),a||=!N(f)||f!==this._$AH[l],f===p?t=p:t!==p&&(t+=(f??"")+n[l+1]),this._$AH[l]=f}a&&!r&&this.j(t)}j(t){t===p?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,t??"")}},te=class extends L{constructor(){super(...arguments),this.type=3}j(t){this.element[this.name]=t===p?void 0:t}},ie=class extends L{constructor(){super(...arguments),this.type=4}j(t){this.element.toggleAttribute(this.name,!!t&&t!==p)}},re=class extends L{constructor(t,e,i,r,n){super(t,e,i,r,n),this.type=5}_$AI(t,e=this){if((t=M(this,t,e,0)??p)===T)return;let i=this._$AH,r=t===p&&i!==p||t.capture!==i.capture||t.once!==i.once||t.passive!==i.passive,n=t!==p&&(i===p||r);r&&this.element.removeEventListener(this.name,this,i),n&&this.element.addEventListener(this.name,this,t),this._$AH=t}handleEvent(t){typeof this._$AH=="function"?this._$AH.call(this.options?.host??this.element,t):this._$AH.handleEvent(t)}},se=class{constructor(t,e,i){this.element=t,this.type=6,this._$AN=void 0,this._$AM=e,this.options=i}get _$AU(){return this._$AM._$AU}_$AI(t){M(this,t)}};var Je=ne.litHtmlPolyfillSupport;Je?.(F,j),(ne.litHtmlVersions??=[]).push("3.3.3");var Te=(s,t,e)=>{let i=e?.renderBefore??t,r=i._$litPart$;if(r===void 0){let n=e?.renderBefore??null;i._$litPart$=r=new j(t.insertBefore(z(),n),n,void 0,e??{})}return r._$AI(s),r};var le=globalThis,v=class extends ${constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let t=super.createRenderRoot();return this.renderOptions.renderBefore??=t.firstChild,t}update(t){let e=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(t),this._$Do=Te(e,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return T}};v._$litElement$=!0,v.finalized=!0,le.litElementHydrateSupport?.({LitElement:v});var Ve=le.litElementPolyfillSupport;Ve?.({LitElement:v});(le.litElementVersions??=[]).push("4.2.2");var Ke={attribute:!0,type:String,converter:D,reflect:!1,hasChanged:J},Qe=(s=Ke,t,e)=>{let{kind:i,metadata:r}=e,n=globalThis.litPropertyMetadata.get(r);if(n===void 0&&globalThis.litPropertyMetadata.set(r,n=new Map),i==="setter"&&((s=Object.create(s)).wrapped=!0),n.set(e.name,s),i==="accessor"){let{name:a}=e;return{set(d){let l=t.get.call(this);t.set.call(this,d),this.requestUpdate(a,l,s,!0,d)},init(d){return d!==void 0&&this.C(a,void 0,s,d),d}}}if(i==="setter"){let{name:a}=e;return function(d){let l=this[a];t.call(this,d),this.requestUpdate(a,l,s,!0,d)}}throw Error("Unsupported decorator location: "+i)};function g(s){return(t,e)=>typeof e=="object"?Qe(s,t,e):((i,r,n)=>{let a=r.hasOwnProperty(n);return r.constructor.createProperty(n,i),a?Object.getOwnPropertyDescriptor(r,n):void 0})(s,t,e)}function u(s){return g({...s,state:!0,attribute:!1})}var Q=class{constructor(t){this.hass=t}async searchRecipes(t={}){let e=new URLSearchParams;e.set("page",String(t.page??1)),e.set("perPage",String(t.perPage??24)),t.search&&e.set("search",t.search),t.cookbook&&e.set("cookbook",t.cookbook);for(let i of t.categories??[])e.append("categories",i);for(let i of t.tags??[])e.append("tags",i);return this.hass.callApi("GET",`mealie_recipe_panel/recipes?${e.toString()}`)}async getCookbooks(){return this.hass.callApi("GET","mealie_recipe_panel/cookbooks")}async getConfig(){return this.hass.callApi("GET","mealie_recipe_panel/config")}async getRecipe(t){return this.hass.callApi("GET",`mealie_recipe_panel/recipes/${t}`)}async updateRecipe(t,e){return this.hass.callApi("POST",`mealie_recipe_panel/recipes/${t}`,e)}async getCategories(){return this.hass.callApi("GET","mealie_recipe_panel/categories")}async getTags(){return this.hass.callApi("GET","mealie_recipe_panel/tags")}recipeImageUrl(t,e="min-original"){return`/api/mealie_recipe_panel/image/${t}/${e}`}async setFavorite(t,e){return this.hass.callApi("PUT",`mealie_recipe_panel/recipes/${t}/favorite`,{favorite:e})}async setMyRecipe(t,e){return this.hass.callApi("PUT",`mealie_recipe_panel/recipes/${t}/my-recipe`,{my_recipe:e})}async addToMealplan(t,e,i){return this.hass.callApi("POST","mealie_recipe_panel/mealplans",{recipeId:t,date:e,entryType:i})}async addFreeformMealplanEntry(t,e,i){return this.hass.callApi("POST","mealie_recipe_panel/mealplans",{date:t,entryType:e,title:i})}async deleteMealplanEntry(t){return this.hass.callApi("DELETE",`mealie_recipe_panel/mealplans/${t}`)}async setLastMade(t,e){return this.hass.callApi("PUT",`mealie_recipe_panel/recipes/${t}/last-made`,{date:e})}async getShoppingLists(){return this.hass.callApi("GET","mealie_recipe_panel/shopping-lists")}async createShoppingList(t){return this.hass.callApi("POST","mealie_recipe_panel/shopping-lists",{name:t})}async addToShoppingList(t,e){return this.hass.callApi("POST","mealie_recipe_panel/shopping-items",{shoppingListId:t,items:e})}async getMealplans(t,e){return this.hass.callApi("GET",`mealie_recipe_panel/mealplans?start_date=${t}&end_date=${e}`)}async getRandomRecipe(t){return this.hass.callApi("GET",`mealie_recipe_panel/recipes/random?mode=${t}`)}async getRandomRecipes(t,e){let{recipes:i}=await this.hass.callApi("GET",`mealie_recipe_panel/recipes/random?mode=${t}&count=${e}`);return i}async deleteRecipe(t){return this.hass.callApi("DELETE",`mealie_recipe_panel/recipes/${t}`)}async getShoppingListDetail(t){return this.hass.callApi("GET",`mealie_recipe_panel/shopping-lists/${t}`)}async setShoppingItemChecked(t,e){return this.hass.callApi("PUT",`mealie_recipe_panel/shopping-items/${t}/checked`,{checked:e})}async deleteShoppingList(t){return this.hass.callApi("DELETE",`mealie_recipe_panel/shopping-lists/${t}`)}async generateRecipe(t){return this.hass.callApi("POST","mealie_recipe_panel/ai/generate-recipe",{prompt:t})}async saveGeneratedRecipe(t,e,i,r){return this.hass.callApi("POST","mealie_recipe_panel/ai/save-recipe",{recipe:t,imageBase64:e,imageMime:i,historyId:r})}async getAiHistory(){return this.hass.callApi("GET","mealie_recipe_panel/ai/history")}async deleteAiHistoryEntry(t){return this.hass.callApi("DELETE",`mealie_recipe_panel/ai/history/${t}`)}aiHistoryImageUrl(t){return`/api/mealie_recipe_panel/ai/history/${t}/image`}async importRecipe(t,e){let i=null,r=null;return e&&(i=await Ye(e),r=e.type||"image/jpeg"),this.hass.callApi("POST","mealie_recipe_panel/ai/import-recipe",{text:t,imageBase64:i,imageMime:r})}async generateRecipeImage(t,e,i){return this.hass.callApi("POST","mealie_recipe_panel/ai/generate-recipe-image",{subject:t,guidance:e,historyId:i})}async attachRecipeImage(t,e,i){return this.hass.callApi("POST",`mealie_recipe_panel/recipes/${t}/ai-image`,{imageBase64:e,imageMime:i})}};function Ye(s){return new Promise((t,e)=>{let i=new FileReader;i.onload=()=>{let r=i.result;t(r.slice(r.indexOf(",")+1))},i.onerror=()=>e(i.error),i.readAsDataURL(s)})}async function C(s,t){if(s instanceof Error&&s.message)return s.message;if(s&&typeof s=="object"){let e=s;if(typeof e.text=="function")try{let n=await e.text();if(n)return n}catch{}let i=s.message;if(typeof i=="string"&&i)return i;let r=s.status;if(typeof r=="number")return`Request failed (HTTP ${r})`}return t}function Ce(s){let t=s.getFullYear(),e=String(s.getMonth()+1).padStart(2,"0"),i=String(s.getDate()).padStart(2,"0");return`${t}-${e}-${i}`}function ce(){return Ce(new Date)}function pe(s,t){let e=new Date(`${s}T00:00:00`);return e.setDate(e.getDate()+t),Ce(e)}var _=class extends v{constructor(){super(...arguments);this.open=!1;this.heading="Are you sure?";this.message="";this.confirmLabel="Confirm";this.destructive=!1}render(){return this.open?o`
       <div class="card">
         <h2>${this.heading}</h2>
         <p>${this.message}</p>
@@ -14,7 +14,7 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
           </button>
         </div>
       </div>
-    `:null}};x.styles=E`
+    `:null}};_.styles=b`
     :host {
       display: none;
     }
@@ -70,12 +70,12 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
     button.confirm.destructive {
       background: #db4437;
     }
-  `,p([y({type:Boolean,reflect:!0})],x.prototype,"open",2),p([y({type:String})],x.prototype,"heading",2),p([y({type:String})],x.prototype,"message",2),p([y({type:String})],x.prototype,"confirmLabel",2),p([y({type:Boolean})],x.prototype,"destructive",2);customElements.get("confirm-dialog")||customElements.define("confirm-dialog",x);var w=class extends v{constructor(){super(...arguments);this.panelJsUrl="";this.deepLink="";this.error=null}connectedCallback(){super.connectedCallback(),this.loadPanel()}async loadPanel(){try{await import(new URL(this.panelJsUrl,window.location.href).href),this.deepLink&&history.replaceState(null,"",location.pathname+this.deepLink);let i=document.createElement("mealie-recipe-panel");i.hass=this.hass,i.narrow=window.innerWidth<870,i.style.display="block",i.style.height="100%",this.panelEl=i,this.requestUpdate()}catch(t){this.error=t instanceof Error?t.message:String(t)}}updated(){this.panelEl&&(this.panelEl.hass=this.hass)}close(){this.dispatchEvent(new CustomEvent("overlay-close",{bubbles:!0,composed:!0}))}render(){return o`
+  `,c([g({type:Boolean,reflect:!0})],_.prototype,"open",2),c([g({type:String})],_.prototype,"heading",2),c([g({type:String})],_.prototype,"message",2),c([g({type:String})],_.prototype,"confirmLabel",2),c([g({type:Boolean})],_.prototype,"destructive",2);customElements.get("confirm-dialog")||customElements.define("confirm-dialog",_);var S=class extends v{constructor(){super(...arguments);this.panelJsUrl="";this.deepLink="";this.error=null}connectedCallback(){super.connectedCallback(),this.loadPanel()}async loadPanel(){try{await import(new URL(this.panelJsUrl,window.location.href).href),this.deepLink&&history.replaceState(null,"",location.pathname+this.deepLink);let i=document.createElement("mealie-recipe-panel");i.hass=this.hass,i.narrow=window.innerWidth<870,i.style.display="block",i.style.height="100%",this.panelEl=i,this.requestUpdate()}catch(e){this.error=e instanceof Error?e.message:String(e)}}updated(){this.panelEl&&(this.panelEl.hass=this.hass)}close(){this.dispatchEvent(new CustomEvent("overlay-close",{bubbles:!0,composed:!0}))}render(){return o`
       <div class="bar">
         <button class="close" aria-label="Close" @click=${()=>this.close()}>✕</button>
       </div>
       ${this.error?o`<div class="status error">Couldn't load the recipe panel: ${this.error}</div>`:this.panelEl?o`<div class="panel-host">${this.panelEl}</div>`:o`<div class="status">Loading…</div>`}
-    `}};w.styles=E`
+    `}};S.styles=b`
     :host {
       position: fixed;
       inset: 0;
@@ -134,23 +134,141 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
     .status.error {
       color: var(--error-color, #db4437);
     }
-  `,p([y({attribute:!1})],w.prototype,"hass",2),p([y({attribute:!1})],w.prototype,"panelJsUrl",2),p([y({attribute:!1})],w.prototype,"deepLink",2),p([m()],w.prototype,"error",2);customElements.get("mealie-launcher-overlay")||customElements.define("mealie-launcher-overlay",w);var pe=["breakfast","lunch","dinner","side","snack","drink","dessert"],Te={all:"All Recipes","my-recipes":"My Recipes",favorites:"Favorites","made-before":"Made Before"},de={mealplan:"This Week's Meals",random:"Random Recipes","random-finder":"Surprise Me","ai-generate":"Generate a Recipe with AI",search:"Find a Recipe"},Ce={mealplan:"\u{1F4C5}",random:"\u{1F37D}","random-finder":"\u{1F3B2}","ai-generate":"\u2728",search:"\u{1F50E}"};function Qe(s){return new Date(`${s}T00:00:00`).toLocaleDateString(void 0,{weekday:"short"})}function Ye(s){return new Date(`${s}T00:00:00`).toLocaleDateString(void 0,{month:"short",day:"numeric"})}var u=class extends v{constructor(){super(...arguments);this.config={type:"custom:mealie-dashboard-card",mode:"mealplan"};this.panelConfig={aiEnabled:!0,aiConfigured:!0};this.loading=!1;this.error="";this.mealplanEntries=[];this.addFreeformDate=null;this.freeformText="";this.freeformEntryType="dinner";this.freeformSaving=!1;this.pendingDeleteEntry=null;this.randomRecipes=[];this.pickedRecipe=null;this.pickerMode="all";this.aiPrompt="";this.searchQuery="";this.searchResults=[];this.overlayJsUrl=null}setConfig(t){if(!t.mode)throw new Error("mealie-dashboard-card: 'mode' is required (mealplan, random, random-finder, ai-generate, search)");let i=this.config.mode;this.config={panel_path:"/mealie-recipes",overlay:!1,count:4,random_mode:"all",days:7,show_thumbnails:!1,...t},this.pickerMode=this.config.random_mode??"all",this.client&&this.config.mode!==i&&this.loadModeData()}static getStubConfig(){return{mode:"mealplan"}}static getConfigElement(){return document.createElement("mealie-dashboard-card-editor")}getCardSize(){return this.config.mode==="mealplan"?this.config.show_thumbnails?5:4:3}willUpdate(){!this.client&&this.hass&&(this.client=new K(this.hass),this.loadConfig(),this.loadModeData())}async loadConfig(){if(this.client)try{this.panelConfig=await this.client.getConfig()}catch{}}loadModeData(){this.client&&(this.error="",this.config.mode==="mealplan"?this.loadMealplan():this.config.mode==="random"?this.loadRandomRecipes():this.config.mode==="random-finder"&&(this.pickedRecipe=null))}async loadMealplan(){if(this.client){this.loading=!0;try{let t=le(),i=ce(t,(this.config.days??7)-1),r=await this.client.getMealplans(t,i);this.mealplanEntries=r.items}catch(t){this.error=await T(t,"Failed to load meal plan")}finally{this.loading=!1}}}openFreeformAdd(t){this.addFreeformDate=t,this.freeformText="",this.freeformEntryType="dinner"}cancelFreeformAdd(){this.addFreeformDate=null,this.freeformText=""}async submitFreeformAdd(){if(!(!this.client||!this.addFreeformDate||!this.freeformText.trim())){this.freeformSaving=!0;try{await this.client.addFreeformMealplanEntry(this.addFreeformDate,this.freeformEntryType,this.freeformText.trim()),this.addFreeformDate=null,this.freeformText="",await this.loadMealplan()}catch(t){this.error=await T(t,"Failed to add meal plan entry")}finally{this.freeformSaving=!1}}}requestDeleteEntry(t){this.pendingDeleteEntry=t}cancelDeleteEntry(){this.pendingDeleteEntry=null}async confirmDeleteEntry(){if(!this.client||!this.pendingDeleteEntry)return;let t=this.pendingDeleteEntry;this.pendingDeleteEntry=null;try{await this.client.deleteMealplanEntry(t.id),this.mealplanEntries=this.mealplanEntries.filter(i=>i.id!==t.id)}catch(i){this.error=await T(i,"Failed to remove meal plan entry")}}async loadRandomRecipes(){if(this.client){this.loading=!0;try{let t=this.config.random_mode??"all",i=this.config.count??4;this.randomRecipes=await this.client.getRandomRecipes(t,i)}catch(t){this.error=await T(t,"Failed to load random recipes")}finally{this.loading=!1}}}async pickRandom(){if(this.client){this.loading=!0,this.error="";try{let{recipe:t}=await this.client.getRandomRecipe(this.pickerMode);this.pickedRecipe=t,t||(this.error="No recipes found for that filter.")}catch(t){this.error=await T(t,"Failed to pick a recipe")}finally{this.loading=!1}}}onSearchInput(t){this.searchQuery=t.target.value,window.clearTimeout(this.searchTimer),this.searchTimer=window.setTimeout(()=>this.runSearch(),350)}async runSearch(){if(!this.client)return;let t=this.searchQuery.trim();if(!t){this.searchResults=[];return}this.loading=!0,this.error="";try{let i=await this.client.searchRecipes({search:t,perPage:6});this.searchResults=i.items}catch(i){this.error=await T(i,"Search failed")}finally{this.loading=!1}}navigate(t){if(this.config.overlay){let i=t.indexOf("?");this.openOverlay(i>=0?t.slice(i):"");return}history.pushState(null,"",t),window.dispatchEvent(new CustomEvent("location-changed",{bubbles:!0,composed:!0}))}async openOverlay(t){if(!this.hass)return;if(!this.overlayJsUrl){let r=await this.hass.callApi("GET","mealie_recipe_panel/panel-asset-url");this.overlayJsUrl=r.url}let i=document.createElement("mealie-launcher-overlay");i.hass=this.hass,i.panelJsUrl=this.overlayJsUrl,i.deepLink=t,i.addEventListener("overlay-close",()=>i.remove(),{once:!0}),document.body.appendChild(i)}openRecipe(t){t&&this.navigate(`${this.config.panel_path}?recipe=${encodeURIComponent(t.slug)}`)}openAiPrompt(){let t=this.aiPrompt.trim();t&&this.navigate(`${this.config.panel_path}?ai_prompt=${encodeURIComponent(t)}`)}openSearchInApp(){let t=this.searchQuery.trim();t&&this.navigate(`${this.config.panel_path}?search=${encodeURIComponent(t)}`)}imageUrl(t){return this.client.recipeImageUrl(t.id)}renderHeader(){let t=this.config.mode;return o`
+  `,c([g({attribute:!1})],S.prototype,"hass",2),c([g({attribute:!1})],S.prototype,"panelJsUrl",2),c([g({attribute:!1})],S.prototype,"deepLink",2),c([u()],S.prototype,"error",2);customElements.get("mealie-launcher-overlay")||customElements.define("mealie-launcher-overlay",S);var Ze=`
+class MealieRecorderProcessor extends AudioWorkletProcessor {
+  process(inputList) {
+    const input = inputList[0];
+    if (!input || input.length < 1) return true;
+    const float32Data = input[0];
+    const int16Data = new Int16Array(float32Data.length);
+    for (let i = 0; i < float32Data.length; i++) {
+      const s = Math.max(-1, Math.min(1, float32Data[i]));
+      int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+    this.port.postMessage(int16Data);
+    return true;
+  }
+}
+registerProcessor("mealie-recorder", MealieRecorderProcessor);
+`;function Xe(s){return s.trim().replace(/[\s.,!?;:]+$/,"")}function et(s){switch(s instanceof DOMException?s.name:""){case"NotAllowedError":case"SecurityError":return"Microphone access was blocked. Allow it for this page, then try again.";case"NotFoundError":case"OverconstrainedError":return"No microphone was found on this device.";case"NotReadableError":return"The microphone is already in use by something else.";default:return s instanceof Error?s.message:String(s)}}var E=class E extends v{constructor(){super(...arguments);this.pipelineId=null;this.disabled=!1;this.label="Dictate";this.status="idle";this.pending=[];this.level=0;this.awaitingHaIcon=!1}static get isSupported(){return window.isSecureContext&&!!navigator.mediaDevices?.getUserMedia&&typeof AudioContext<"u"}disconnectedCallback(){super.disconnectedCallback(),this.teardown()}setStatus(e){if(this.status===e)return;this.status=e;let i=e==="starting"?"listening":e;this.dispatchEvent(new CustomEvent("voice-state",{detail:{state:i},bubbles:!0,composed:!0}))}startLevelLoop(){let e=()=>{this.status!=="listening"&&this.status!=="starting"||(this.style.setProperty("--level",this.level.toFixed(3)),this.level*=.82,this.levelFrame=requestAnimationFrame(e))};this.levelFrame=requestAnimationFrame(e)}stopLevelLoop(){this.levelFrame!==void 0&&cancelAnimationFrame(this.levelFrame),this.levelFrame=void 0,this.level=0,this.style.setProperty("--level","0")}measureLevel(e){if(!e.length)return;let i=0;for(let a=0;a<e.length;a+=4){let d=e[a]/32768;i+=d*d}let r=Math.sqrt(i/Math.ceil(e.length/4)),n=Math.min(1,r*6);this.level=Math.max(this.level,n)}fail(e){this.teardown(),this.dispatchEvent(new CustomEvent("voice-error",{detail:{message:e},bubbles:!0,composed:!0}))}async onClick(){this.status==="idle"?await this.start():this.teardown()}async start(){if(this.hass){this.setStatus("starting"),this.pending=[],this.handlerId=void 0;try{await this.openMicrophone()}catch(e){this.fail(et(e));return}try{this.unsub=await this.hass.connection.subscribeMessage(e=>this.onPipelineEvent(e),{type:"assist_pipeline/run",start_stage:"stt",end_stage:"stt",input:{sample_rate:this.context.sampleRate},...this.pipelineId?{pipeline:this.pipelineId}:{}}),this.setStatus("listening"),this.startLevelLoop()}catch(e){this.fail(e instanceof Error?e.message:String(e))}}}async openMicrophone(){let e=new AudioContext;this.context=e,this.stream=await navigator.mediaDevices.getUserMedia({audio:!0});let i=URL.createObjectURL(new Blob([Ze],{type:"text/javascript"}));try{await e.audioWorklet.addModule(i)}finally{URL.revokeObjectURL(i)}this.source=e.createMediaStreamSource(this.stream),this.recorder=new AudioWorkletNode(e,"mealie-recorder"),this.recorder.port.onmessage=r=>{let n=r.data;this.measureLevel(n),this.sendChunk(n)},this.source.connect(this.recorder)}onPipelineEvent(e){switch(e.type){case"run-start":this.handlerId=e.data?.runner_data?.stt_binary_handler_id??void 0;for(let i of this.pending)this.sendChunk(i);this.pending=[];break;case"stt-vad-end":this.stopLevelLoop(),this.setStatus("transcribing");break;case"stt-end":{let i=Xe(e.data?.stt_output?.text??"");this.stopRecording(),this.setStatus("idle"),i?this.dispatchEvent(new CustomEvent("voice-text",{detail:{text:i},bubbles:!0,composed:!0})):this.fail("Didn't catch that \u2014 try again.");break}case"run-end":this.teardown();break;case"error":this.fail(e.data?.message||"Speech recognition failed");break;default:break}}sendChunk(e){if(this.handlerId===void 0){this.pending.push(e);return}let i=this.hass?.connection.socket;if(!i)return;i.binaryType="arraybuffer";let r=new Uint8Array(1+e.length*2);r[0]=this.handlerId,r.set(new Uint8Array(e.buffer,e.byteOffset,e.length*2),1),i.send(r)}stopRecording(){this.recorder&&(this.recorder.port.onmessage=null,this.recorder.disconnect()),this.source?.disconnect(),this.stream?.getTracks().forEach(e=>e.stop()),this.handlerId!==void 0&&(this.sendChunk(new Int16Array),this.handlerId=void 0),this.context?.close(),this.recorder=void 0,this.source=void 0,this.stream=void 0,this.context=void 0,this.pending=[]}teardown(){this.stopRecording(),this.stopLevelLoop(),this.unsub?.(),this.unsub=void 0,this.setStatus("idle")}renderIcon(){return customElements.get("ha-icon")?o`<ha-icon icon="mdi:microphone"></ha-icon>`:(this.awaitingHaIcon||(this.awaitingHaIcon=!0,customElements.whenDefined("ha-icon").then(()=>this.requestUpdate())),o`🎤`)}render(){if(!E.isSupported||!this.hass)return p;let e=this.status==="listening"||this.status==="starting",i={idle:this.label,starting:"Starting\u2026",listening:"Listening \u2014 tap to cancel",transcribing:"Transcribing\u2026"};return o`
+      <button
+        class=${e?"listening":""}
+        ?disabled=${this.disabled||this.status==="transcribing"}
+        aria-label=${i[this.status]}
+        aria-pressed=${e?"true":"false"}
+        title=${i[this.status]}
+        @click=${this.onClick}
+      >
+        ${this.status==="transcribing"?o`<div class="spinner"></div>`:o`${e?o`<div class="halo"></div>`:p}${this.renderIcon()}`}
+      </button>
+    `}};E.styles=b`
+    :host {
+      display: inline-flex;
+      /* Written once per animation frame while listening. */
+      --level: 0;
+    }
+    button {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--secondary-text-color, #757575);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    button:active:not(:disabled) {
+      background: var(--divider-color, #e0e0e0);
+    }
+    button.listening {
+      color: var(--primary-color, #03a9f4);
+    }
+    ha-icon {
+      --mdc-icon-size: 22px;
+      display: flex;
+    }
+    /* Sits behind the icon and tracks the speaker's voice: a slow base
+       breath so it's alive during silence, scaled out by --level as the
+       room gets louder. */
+    .halo {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: var(--primary-color, #03a9f4);
+      opacity: calc(0.12 + var(--level) * 0.28);
+      transform: scale(calc(0.78 + var(--level) * 0.3));
+      transition:
+        transform 90ms ease-out,
+        opacity 90ms ease-out;
+      animation: breathe 2.4s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--divider-color, #e0e0e0);
+      border-top-color: var(--primary-color, #03a9f4);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes breathe {
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 transparent;
+      }
+      50% {
+        box-shadow: 0 0 0 4px rgba(3, 169, 244, 0.12);
+      }
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .halo {
+        animation: none;
+        transition: none;
+      }
+      .spinner {
+        animation: none;
+      }
+    }
+  `,c([g({attribute:!1})],E.prototype,"hass",2),c([g({attribute:!1})],E.prototype,"pipelineId",2),c([g({type:Boolean})],E.prototype,"disabled",2),c([g({type:String})],E.prototype,"label",2),c([u()],E.prototype,"status",2);var de=E;customElements.get("mealie-voice-button")||customElements.define("mealie-voice-button",de);var he=["breakfast","lunch","dinner","side","snack","drink","dessert"],Me={all:"All Recipes","my-recipes":"My Recipes",favorites:"Favorites","made-before":"Made Before"},ue={mealplan:"This Week's Meals",random:"Random Recipes","random-finder":"Surprise Me","ai-generate":"Generate a Recipe with AI",search:"Find a Recipe"},Le={mealplan:"\u{1F4C5}",random:"\u{1F37D}","random-finder":"\u{1F3B2}","ai-generate":"\u2728",search:"\u{1F50E}"};function tt(s){return new Date(`${s}T00:00:00`).toLocaleDateString(void 0,{weekday:"short"})}function it(s){return new Date(`${s}T00:00:00`).toLocaleDateString(void 0,{month:"short",day:"numeric"})}var m=class extends v{constructor(){super(...arguments);this.config={type:"custom:mealie-dashboard-card",mode:"mealplan"};this.panelConfig={aiEnabled:!0,aiConfigured:!0,voiceEnabled:!1,voicePipeline:null};this.loading=!1;this.error="";this.mealplanEntries=[];this.addFreeformDate=null;this.freeformText="";this.freeformEntryType="dinner";this.freeformSaving=!1;this.pendingDeleteEntry=null;this.randomRecipes=[];this.pickedRecipe=null;this.pickerMode="all";this.aiPrompt="";this.voiceState="idle";this.searchQuery="";this.searchResults=[];this.overlayJsUrl=null}setConfig(e){if(!e.mode)throw new Error("mealie-dashboard-card: 'mode' is required (mealplan, random, random-finder, ai-generate, search)");let i=this.config.mode;this.config={panel_path:"/mealie-recipes",overlay:!1,count:4,random_mode:"all",days:7,show_thumbnails:!1,...e},this.pickerMode=this.config.random_mode??"all",this.client&&this.config.mode!==i&&this.loadModeData()}static getStubConfig(){return{mode:"mealplan"}}static getConfigElement(){return document.createElement("mealie-dashboard-card-editor")}getCardSize(){return this.config.mode==="mealplan"?this.config.show_thumbnails?5:4:3}willUpdate(){!this.client&&this.hass&&(this.client=new Q(this.hass),this.loadConfig(),this.loadModeData())}async loadConfig(){if(this.client)try{this.panelConfig=await this.client.getConfig()}catch{}}loadModeData(){this.client&&(this.error="",this.config.mode==="mealplan"?this.loadMealplan():this.config.mode==="random"?this.loadRandomRecipes():this.config.mode==="random-finder"&&(this.pickedRecipe=null))}async loadMealplan(){if(this.client){this.loading=!0;try{let e=ce(),i=pe(e,(this.config.days??7)-1),r=await this.client.getMealplans(e,i);this.mealplanEntries=r.items}catch(e){this.error=await C(e,"Failed to load meal plan")}finally{this.loading=!1}}}openFreeformAdd(e){this.addFreeformDate=e,this.freeformText="",this.freeformEntryType="dinner"}cancelFreeformAdd(){this.addFreeformDate=null,this.freeformText=""}async submitFreeformAdd(){if(!(!this.client||!this.addFreeformDate||!this.freeformText.trim())){this.freeformSaving=!0;try{await this.client.addFreeformMealplanEntry(this.addFreeformDate,this.freeformEntryType,this.freeformText.trim()),this.addFreeformDate=null,this.freeformText="",await this.loadMealplan()}catch(e){this.error=await C(e,"Failed to add meal plan entry")}finally{this.freeformSaving=!1}}}requestDeleteEntry(e){this.pendingDeleteEntry=e}cancelDeleteEntry(){this.pendingDeleteEntry=null}async confirmDeleteEntry(){if(!this.client||!this.pendingDeleteEntry)return;let e=this.pendingDeleteEntry;this.pendingDeleteEntry=null;try{await this.client.deleteMealplanEntry(e.id),this.mealplanEntries=this.mealplanEntries.filter(i=>i.id!==e.id)}catch(i){this.error=await C(i,"Failed to remove meal plan entry")}}async loadRandomRecipes(){if(this.client){this.loading=!0;try{let e=this.config.random_mode??"all",i=this.config.count??4;this.randomRecipes=await this.client.getRandomRecipes(e,i)}catch(e){this.error=await C(e,"Failed to load random recipes")}finally{this.loading=!1}}}async pickRandom(){if(this.client){this.loading=!0,this.error="";try{let{recipe:e}=await this.client.getRandomRecipe(this.pickerMode);this.pickedRecipe=e,e||(this.error="No recipes found for that filter.")}catch(e){this.error=await C(e,"Failed to pick a recipe")}finally{this.loading=!1}}}onSearchInput(e){this.searchQuery=e.target.value,window.clearTimeout(this.searchTimer),this.searchTimer=window.setTimeout(()=>this.runSearch(),350)}onVoiceSearch(e){this.searchQuery=e.detail.text,window.clearTimeout(this.searchTimer),this.runSearch()}onVoiceError(e){this.error=e.detail.message}voicePlaceholder(e){return this.voiceState==="listening"?"Listening\u2026":this.voiceState==="transcribing"?"Transcribing\u2026":e}renderVoiceButton(e,i){return this.panelConfig.voiceEnabled?o`<mealie-voice-button
+      .hass=${this.hass}
+      .pipelineId=${this.panelConfig.voicePipeline}
+      label=${e}
+      @voice-text=${i}
+      @voice-error=${this.onVoiceError}
+      @voice-state=${r=>this.voiceState=r.detail.state}
+    ></mealie-voice-button>`:p}async runSearch(){if(!this.client)return;let e=this.searchQuery.trim();if(!e){this.searchResults=[];return}this.loading=!0,this.error="";try{let i=await this.client.searchRecipes({search:e,perPage:6});this.searchResults=i.items}catch(i){this.error=await C(i,"Search failed")}finally{this.loading=!1}}navigate(e){if(this.config.overlay){let i=e.indexOf("?");this.openOverlay(i>=0?e.slice(i):"");return}history.pushState(null,"",e),window.dispatchEvent(new CustomEvent("location-changed",{bubbles:!0,composed:!0}))}async openOverlay(e){if(!this.hass)return;if(!this.overlayJsUrl){let r=await this.hass.callApi("GET","mealie_recipe_panel/panel-asset-url");this.overlayJsUrl=r.url}let i=document.createElement("mealie-launcher-overlay");i.hass=this.hass,i.panelJsUrl=this.overlayJsUrl,i.deepLink=e,i.addEventListener("overlay-close",()=>i.remove(),{once:!0}),document.body.appendChild(i)}openRecipe(e){e&&this.navigate(`${this.config.panel_path}?recipe=${encodeURIComponent(e.slug)}`)}openAiPrompt(){let e=this.aiPrompt.trim();e&&this.navigate(`${this.config.panel_path}?ai_prompt=${encodeURIComponent(e)}`)}openSearchInApp(){let e=this.searchQuery.trim();e&&this.navigate(`${this.config.panel_path}?search=${encodeURIComponent(e)}`)}imageUrl(e){return this.client.recipeImageUrl(e.id)}renderHeader(){let e=this.config.mode;return o`
       <div class="header">
-        <span class="icon">${Ce[t]}</span>
-        <span class="title">${this.config.title||de[t]}</span>
-        ${t==="random"?o`<button class="shuffle" aria-label="Shuffle" @click=${()=>this.loadRandomRecipes()}>🔄</button>`:c}
+        <span class="icon">${Le[e]}</span>
+        <span class="title">${this.config.title||ue[e]}</span>
+        ${e==="random"?o`<button class="shuffle" aria-label="Shuffle" @click=${()=>this.loadRandomRecipes()}>🔄</button>`:p}
       </div>
-    `}renderMealplanEntry(t){let i=t.recipe?.name??(t.title||"Untitled");return this.config.show_thumbnails?o`
+    `}renderMealplanEntry(e){let i=e.recipe?.name??(e.title||"Untitled");return this.config.show_thumbnails?o`
       <div class="entry-thumb">
         <div class="entry-thumb-img-wrap">
           <button
             class="entry-thumb-img-btn"
-            ?disabled=${!t.recipe}
-            @click=${()=>this.openRecipe(t.recipe)}
+            ?disabled=${!e.recipe}
+            @click=${()=>this.openRecipe(e.recipe)}
           >
-            ${t.recipe?.image?o`<img src=${this.imageUrl(t.recipe)} alt="" />`:o`<div class="thumb"></div>`}
+            ${e.recipe?.image?o`<img src=${this.imageUrl(e.recipe)} alt="" />`:o`<div class="thumb"></div>`}
           </button>
-          <button class="entry-thumb-del" aria-label="Remove from plan" @click=${()=>this.requestDeleteEntry(t)}>
+          <button class="entry-thumb-del" aria-label="Remove from plan" @click=${()=>this.requestDeleteEntry(e)}>
             ✕
           </button>
         </div>
@@ -158,10 +276,10 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
       </div>
     `:o`
         <span class="entry-chip-group">
-          <button class="entry-chip" ?disabled=${!t.recipe} @click=${()=>this.openRecipe(t.recipe)}>
+          <button class="entry-chip" ?disabled=${!e.recipe} @click=${()=>this.openRecipe(e.recipe)}>
             ${i}
           </button>
-          <button class="entry-chip-del" aria-label="Remove from plan" @click=${()=>this.requestDeleteEntry(t)}>
+          <button class="entry-chip-del" aria-label="Remove from plan" @click=${()=>this.requestDeleteEntry(e)}>
             ✕
           </button>
         </span>
@@ -171,14 +289,14 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
           type="text"
           placeholder="e.g. Leftovers, Takeout, Eating out"
           .value=${this.freeformText}
-          @input=${t=>this.freeformText=t.target.value}
-          @keydown=${t=>{t.key==="Enter"&&this.submitFreeformAdd()}}
+          @input=${e=>this.freeformText=e.target.value}
+          @keydown=${e=>{e.key==="Enter"&&this.submitFreeformAdd()}}
         />
         <select
           .value=${this.freeformEntryType}
-          @change=${t=>this.freeformEntryType=t.target.value}
+          @change=${e=>this.freeformEntryType=e.target.value}
         >
-          ${pe.map(t=>o`<option value=${t}>${t}</option>`)}
+          ${he.map(e=>o`<option value=${e}>${e}</option>`)}
         </select>
         <button
           class="primary small"
@@ -189,26 +307,26 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
         </button>
         <button class="cancel-small" @click=${()=>this.cancelFreeformAdd()}>Cancel</button>
       </div>
-    `}renderMealplan(){if(this.loading&&!this.mealplanEntries.length)return o`<p class="muted">Loading…</p>`;let t=Array.from({length:this.config.days??7},(i,r)=>ce(le(),r));return o`
-      ${t.map(i=>{let r=this.mealplanEntries.filter(n=>n.date===i).sort((n,a)=>pe.indexOf(n.entryType)-pe.indexOf(a.entryType));return o`
+    `}renderMealplan(){if(this.loading&&!this.mealplanEntries.length)return o`<p class="muted">Loading…</p>`;let e=Array.from({length:this.config.days??7},(i,r)=>pe(ce(),r));return o`
+      ${e.map(i=>{let r=this.mealplanEntries.filter(n=>n.date===i).sort((n,a)=>he.indexOf(n.entryType)-he.indexOf(a.entryType));return o`
           <div class="day-row">
-            <div class="day-label">${Qe(i)}<br />${Ye(i)}</div>
+            <div class="day-label">${tt(i)}<br />${it(i)}</div>
             <div class="day-col">
               <div class="day-entries">
-                ${r.length?r.map(n=>this.renderMealplanEntry(n)):c}
-                ${!r.length&&this.addFreeformDate!==i?o`<span class="muted">Nothing planned</span>`:c}
-                ${this.addFreeformDate!==i?o`<button class="add-freeform" @click=${()=>this.openFreeformAdd(i)}>+ Add</button>`:c}
+                ${r.length?r.map(n=>this.renderMealplanEntry(n)):p}
+                ${!r.length&&this.addFreeformDate!==i?o`<span class="muted">Nothing planned</span>`:p}
+                ${this.addFreeformDate!==i?o`<button class="add-freeform" @click=${()=>this.openFreeformAdd(i)}>+ Add</button>`:p}
               </div>
-              ${this.addFreeformDate===i?this.renderFreeformForm():c}
+              ${this.addFreeformDate===i?this.renderFreeformForm():p}
             </div>
           </div>
         `})}
     `}renderRandom(){return this.loading&&!this.randomRecipes.length?o`<p class="muted">Loading…</p>`:this.randomRecipes.length?o`
       <div class="tiles">
-        ${this.randomRecipes.map(t=>o`
-            <button class="tile" @click=${()=>this.openRecipe(t)}>
-              ${t.image?o`<img src=${this.imageUrl(t)} alt="" />`:o`<div class="thumb"></div>`}
-              <div class="name">${t.name}</div>
+        ${this.randomRecipes.map(e=>o`
+            <button class="tile" @click=${()=>this.openRecipe(e)}>
+              ${e.image?o`<img src=${this.imageUrl(e)} alt="" />`:o`<div class="thumb"></div>`}
+              <div class="name">${e.name}</div>
             </button>
           `)}
       </div>
@@ -216,9 +334,9 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
       <div class="finder-controls">
         <select
           .value=${this.pickerMode}
-          @change=${t=>this.pickerMode=t.target.value}
+          @change=${e=>this.pickerMode=e.target.value}
         >
-          ${Object.entries(Te).map(([t,i])=>o`<option value=${t}>${i}</option>`)}
+          ${Object.entries(Me).map(([e,i])=>o`<option value=${e}>${i}</option>`)}
         </select>
         <button class="primary" ?disabled=${this.loading} @click=${()=>this.pickRandom()}>
           ${this.loading?"Picking\u2026":"\u{1F3B2} Surprise Me"}
@@ -233,13 +351,16 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
               </div>
             </div>
             <button class="try-again" @click=${()=>this.pickRandom()}>🔄 Try Again</button>
-          `:c}
+          `:p}
     `}renderAiGenerate(){return this.panelConfig.aiEnabled?this.panelConfig.aiConfigured?o`
-      <textarea
-        placeholder="e.g. a thick and crispy pizza dough recipe"
-        .value=${this.aiPrompt}
-        @input=${t=>this.aiPrompt=t.target.value}
-      ></textarea>
+      <div class="voice-wrap multiline">
+        <textarea
+          placeholder=${this.voicePlaceholder("e.g. a thick and crispy pizza dough recipe")}
+          .value=${this.aiPrompt}
+          @input=${e=>this.aiPrompt=e.target.value}
+        ></textarea>
+        ${this.renderVoiceButton("Dictate a recipe request",e=>this.aiPrompt=e.detail.text)}
+      </div>
       <button
         class="primary"
         style="margin-top: 10px; width: 100%;"
@@ -254,34 +375,37 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
           <strong>Settings → Devices &amp; Services → Mealie Kitchen Display → Configure</strong>
           to start generating recipes with AI.
         </p>
-      `:o`<p class="setup-needed">AI recipe features are disabled in this integration's settings.</p>`}renderSearch(){let t=this.searchQuery.trim(),i=this.panelConfig.aiEnabled&&t.length>0;return o`
+      `:o`<p class="setup-needed">AI recipe features are disabled in this integration's settings.</p>`}renderSearch(){let e=this.searchQuery.trim(),i=this.panelConfig.aiEnabled&&e.length>0;return o`
       <div class="search-row">
-        <input
-          type="text"
-          placeholder="Search recipes…"
-          .value=${this.searchQuery}
-          @input=${this.onSearchInput}
-        />
+        <div class="voice-wrap single">
+          <input
+            type="text"
+            placeholder=${this.voicePlaceholder("Search recipes\u2026")}
+            .value=${this.searchQuery}
+            @input=${this.onSearchInput}
+          />
+          ${this.renderVoiceButton("Dictate a recipe search",this.onVoiceSearch)}
+        </div>
       </div>
-      ${this.loading?o`<p class="muted">Searching…</p>`:c}
-      ${!this.loading&&t&&!this.searchResults.length?o`<p class="muted">No recipes found.</p>`:c}
+      ${this.loading?o`<p class="muted">Searching…</p>`:p}
+      ${!this.loading&&e&&!this.searchResults.length?o`<p class="muted">No recipes found.</p>`:p}
       ${this.searchResults.map(r=>o`
           <button class="result-row" @click=${()=>this.openRecipe(r)}>
             ${r.image?o`<img src=${this.imageUrl(r)} alt="" />`:o`<div class="thumb"></div>`}
             <span class="name">${r.name}</span>
           </button>
         `)}
-      ${this.searchResults.length?o`<button class="see-all" @click=${()=>this.openSearchInApp()}>See all results in app →</button>`:c}
+      ${this.searchResults.length?o`<button class="see-all" @click=${()=>this.openSearchInApp()}>See all results in app →</button>`:p}
       ${i?o`
-            <button class="ai-cta" @click=${()=>this.navigate(`${this.config.panel_path}?ai_prompt=${encodeURIComponent(t)}`)}>
-              ✨ Generate "${t}" recipe with AI
+            <button class="ai-cta" @click=${()=>this.navigate(`${this.config.panel_path}?ai_prompt=${encodeURIComponent(e)}`)}>
+              ✨ Generate "${e}" recipe with AI
             </button>
-          `:c}
-    `}render(){let t;switch(this.config.mode){case"mealplan":t=this.renderMealplan();break;case"random":t=this.renderRandom();break;case"random-finder":t=this.renderRandomFinder();break;case"ai-generate":t=this.renderAiGenerate();break;case"search":t=this.renderSearch();break}return o`
+          `:p}
+    `}render(){let e;switch(this.config.mode){case"mealplan":e=this.renderMealplan();break;case"random":e=this.renderRandom();break;case"random-finder":e=this.renderRandomFinder();break;case"ai-generate":e=this.renderAiGenerate();break;case"search":e=this.renderSearch();break}return o`
       <ha-card>
         ${this.renderHeader()}
-        ${t}
-        ${this.error?o`<p class="error">${this.error}</p>`:c}
+        ${e}
+        ${this.error?o`<p class="error">${this.error}</p>`:p}
       </ha-card>
       <confirm-dialog
         .open=${!!this.pendingDeleteEntry}
@@ -292,7 +416,7 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
         @confirm=${()=>this.confirmDeleteEntry()}
         @cancel=${()=>this.cancelDeleteEntry()}
       ></confirm-dialog>
-    `}};u.styles=E`
+    `}};m.styles=b`
     :host {
       display: block;
     }
@@ -615,6 +739,29 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
       min-height: 72px;
       resize: vertical;
     }
+    /* The mic sits inside the field; the padding keeps text clear of it. */
+    .voice-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+    }
+    .voice-wrap input[type="text"] {
+      padding-right: 46px;
+    }
+    .voice-wrap textarea {
+      padding-right: 46px;
+    }
+    .voice-wrap mealie-voice-button {
+      position: absolute;
+      right: 6px;
+    }
+    .voice-wrap.single mealie-voice-button {
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .voice-wrap.multiline mealie-voice-button {
+      top: 6px;
+    }
     .setup-needed {
       font-size: 14px;
       color: var(--secondary-text-color, #757575);
@@ -679,14 +826,14 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
       cursor: pointer;
       padding: 4px 0;
     }
-  `,p([y({attribute:!1})],u.prototype,"hass",2),p([m()],u.prototype,"config",2),p([m()],u.prototype,"panelConfig",2),p([m()],u.prototype,"loading",2),p([m()],u.prototype,"error",2),p([m()],u.prototype,"mealplanEntries",2),p([m()],u.prototype,"addFreeformDate",2),p([m()],u.prototype,"freeformText",2),p([m()],u.prototype,"freeformEntryType",2),p([m()],u.prototype,"freeformSaving",2),p([m()],u.prototype,"pendingDeleteEntry",2),p([m()],u.prototype,"randomRecipes",2),p([m()],u.prototype,"pickedRecipe",2),p([m()],u.prototype,"pickerMode",2),p([m()],u.prototype,"aiPrompt",2),p([m()],u.prototype,"searchQuery",2),p([m()],u.prototype,"searchResults",2);var U=class extends v{setConfig(e){this._config=e}updateConfig(e){this._config&&(this._config={...this._config,...e},this.dispatchEvent(new CustomEvent("config-changed",{detail:{config:this._config},bubbles:!0,composed:!0})))}render(){if(!this._config)return c;let e=this._config.mode;return o`
+  `,c([g({attribute:!1})],m.prototype,"hass",2),c([u()],m.prototype,"config",2),c([u()],m.prototype,"panelConfig",2),c([u()],m.prototype,"loading",2),c([u()],m.prototype,"error",2),c([u()],m.prototype,"mealplanEntries",2),c([u()],m.prototype,"addFreeformDate",2),c([u()],m.prototype,"freeformText",2),c([u()],m.prototype,"freeformEntryType",2),c([u()],m.prototype,"freeformSaving",2),c([u()],m.prototype,"pendingDeleteEntry",2),c([u()],m.prototype,"randomRecipes",2),c([u()],m.prototype,"pickedRecipe",2),c([u()],m.prototype,"pickerMode",2),c([u()],m.prototype,"aiPrompt",2),c([u()],m.prototype,"voiceState",2),c([u()],m.prototype,"searchQuery",2),c([u()],m.prototype,"searchResults",2);var U=class extends v{setConfig(t){this._config=t}updateConfig(t){this._config&&(this._config={...this._config,...t},this.dispatchEvent(new CustomEvent("config-changed",{detail:{config:this._config},bubbles:!0,composed:!0})))}render(){if(!this._config)return p;let t=this._config.mode;return o`
       <div class="row">
         <label>Mode</label>
         <select
-          .value=${e}
-          @change=${t=>this.updateConfig({mode:t.target.value})}
+          .value=${t}
+          @change=${e=>this.updateConfig({mode:e.target.value})}
         >
-          ${Object.entries(de).map(([t,i])=>o`<option value=${t}>${Ce[t]} ${i}</option>`)}
+          ${Object.entries(ue).map(([e,i])=>o`<option value=${e}>${Le[e]} ${i}</option>`)}
         </select>
       </div>
 
@@ -694,14 +841,14 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
         <label>Title</label>
         <input
           type="text"
-          placeholder=${de[e]}
+          placeholder=${ue[t]}
           .value=${this._config.title??""}
-          @input=${t=>this.updateConfig({title:t.target.value})}
+          @input=${e=>this.updateConfig({title:e.target.value})}
         />
         <span class="hint">Leave blank to use the default title for this mode.</span>
       </div>
 
-      ${e==="random"?o`
+      ${t==="random"?o`
             <div class="row">
               <label>Number of recipes</label>
               <input
@@ -709,11 +856,11 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
                 min="1"
                 max="12"
                 .value=${String(this._config.count??4)}
-                @input=${t=>this.updateConfig({count:Number(t.target.value)||4})}
+                @input=${e=>this.updateConfig({count:Number(e.target.value)||4})}
               />
             </div>
-          `:c}
-      ${e==="mealplan"?o`
+          `:p}
+      ${t==="mealplan"?o`
             <div class="row">
               <label>Number of days</label>
               <input
@@ -721,7 +868,7 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
                 min="1"
                 max="14"
                 .value=${String(this._config.days??7)}
-                @input=${t=>this.updateConfig({days:Number(t.target.value)||7})}
+                @input=${e=>this.updateConfig({days:Number(e.target.value)||7})}
               />
               <span class="hint">Rolling window starting today.</span>
             </div>
@@ -730,30 +877,30 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
                 <input
                   type="checkbox"
                   .checked=${this._config.show_thumbnails??!1}
-                  @change=${t=>this.updateConfig({show_thumbnails:t.target.checked})}
+                  @change=${e=>this.updateConfig({show_thumbnails:e.target.checked})}
                 />
                 Show recipe thumbnails
               </label>
             </div>
-          `:c}
-      ${e==="random"||e==="random-finder"?o`
+          `:p}
+      ${t==="random"||t==="random-finder"?o`
             <div class="row">
               <label>Recipe pool</label>
               <select
                 .value=${this._config.random_mode??"all"}
-                @change=${t=>this.updateConfig({random_mode:t.target.value})}
+                @change=${e=>this.updateConfig({random_mode:e.target.value})}
               >
-                ${Object.entries(Te).map(([t,i])=>o`<option value=${t}>${i}</option>`)}
+                ${Object.entries(Me).map(([e,i])=>o`<option value=${e}>${i}</option>`)}
               </select>
             </div>
-          `:c}
+          `:p}
 
       <div class="row checkbox-row">
         <label>
           <input
             type="checkbox"
             .checked=${this._config.overlay??!1}
-            @change=${t=>this.updateConfig({overlay:t.target.checked})}
+            @change=${e=>this.updateConfig({overlay:e.target.checked})}
           />
           Open as overlay
         </label>
@@ -769,11 +916,11 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
           type="text"
           placeholder="/mealie-recipes"
           .value=${this._config.panel_path??""}
-          @input=${t=>this.updateConfig({panel_path:t.target.value})}
+          @input=${e=>this.updateConfig({panel_path:e.target.value})}
         />
         <span class="hint">Only needed if you've registered the panel under a different URL.</span>
       </div>
-    `}};U.styles=E`
+    `}};U.styles=b`
     .row {
       display: flex;
       flex-direction: column;
@@ -811,7 +958,7 @@ var Me=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var p=(s,e,t
       width: 18px;
       height: 18px;
     }
-  `,p([y({attribute:!1})],U.prototype,"hass",2),p([m()],U.prototype,"_config",2);window.customCards=window.customCards||[];window.customCards.push({type:"mealie-dashboard-card",name:"Mealie Recipe Card",description:"Meal plan, random recipes, AI recipe generator, surprise-me picker, or recipe search \u2014 pick a mode in the card config. Selecting a recipe opens it in the full Mealie panel."});customElements.get("mealie-dashboard-card")||customElements.define("mealie-dashboard-card",u);customElements.get("mealie-dashboard-card-editor")||customElements.define("mealie-dashboard-card-editor",U);export{u as MealieDashboardCard,U as MealieDashboardCardEditor};
+  `,c([g({attribute:!1})],U.prototype,"hass",2),c([u()],U.prototype,"_config",2);window.customCards=window.customCards||[];window.customCards.push({type:"mealie-dashboard-card",name:"Mealie Recipe Card",description:"Meal plan, random recipes, AI recipe generator, surprise-me picker, or recipe search \u2014 pick a mode in the card config. Selecting a recipe opens it in the full Mealie panel."});customElements.get("mealie-dashboard-card")||customElements.define("mealie-dashboard-card",m);customElements.get("mealie-dashboard-card-editor")||customElements.define("mealie-dashboard-card-editor",U);export{m as MealieDashboardCard,U as MealieDashboardCardEditor};
 /*! Bundled license information:
 
 @lit/reactive-element/css-tag.js:

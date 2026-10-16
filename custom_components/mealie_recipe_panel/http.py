@@ -25,6 +25,8 @@ from .const import (
     CONF_AI_IMAGE_ENTITY,
     CONF_AI_TEXT_ENTITY,
     CONF_MEALIE_TOKEN,
+    CONF_VOICE_ENABLED,
+    CONF_VOICE_PIPELINE,
     DOMAIN,
     STATIC_URL_BASE,
 )
@@ -515,6 +517,12 @@ class MealiePanelConfigView(MealieProxyView):
             {
                 "aiEnabled": bool(options.get(CONF_AI_ENABLED, True)),
                 "aiConfigured": bool(options.get(CONF_AI_TEXT_ENTITY)),
+                # Speech input also needs assist_pipeline actually loaded —
+                # without it there's nothing to run the microphone audio
+                # through, so don't offer the button at all.
+                "voiceEnabled": bool(options.get(CONF_VOICE_ENABLED, False))
+                and "assist_pipeline" in self.hass.config.components,
+                "voicePipeline": options.get(CONF_VOICE_PIPELINE) or None,
             }
         )
 

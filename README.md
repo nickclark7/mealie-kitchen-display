@@ -71,6 +71,7 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
 - A matching Lovelace launcher card, so the panel can also be opened from any dashboard
 - **A configurable dashboard card** with its own visual editor — meal plan, random recipes, a "surprise me" picker, the AI recipe generator, or recipe search, each launching straight into the full panel — see [Dashboard Card](#dashboard-card) below
 - **AI recipe finder**: generate a recipe from a text description, or import one from a photo and/or pasted text, using your own Home Assistant `ai_task.*` entities. Past AI recipes are kept automatically so you can save the keepers later — see [AI Recipe Finder](#ai-recipe-finder) below
+- **Voice input** (optional): a microphone button in the recipe search box, the AI prompt and the dashboard card, transcribing speech with a speech-to-text engine you've already configured in Home Assistant — see [Voice Input](#voice-input) below
 - AI tasks can be disabled and removed form the interface for those who dont want that capability
 
 ## Installation
@@ -170,6 +171,35 @@ If you use OpenAI for recipe photos, you'll likely hit this error the first time
 To fix: go to [platform.openai.com/settings/organization/general](https://platform.openai.com/settings/organization/general) and click **Verify Organization**. It can take up to 15 minutes to propagate after verifying. Also double-check the model field in your OpenAI Conversation entry — it must be the exact API model id (e.g. `gpt-image-2`), not a display name like "GPT Image 2".
 
 If you'd rather not verify with OpenAI, a local Ollama image-generation model is a free alternative for the *text/import* side of this feature, but — per the table above — can't currently be used for the image-generation side; that part is OpenAI-only for now.
+
+## Voice Input
+
+Typing on a kitchen tablet with floury hands is no fun, so the add-on's short free-text boxes can be dictated instead. A 🎤 button appears inside:
+
+- the recipe search box in the panel,
+- the AI Recipe Finder's **Generate** prompt,
+- the dashboard card's **search** and **ai-generate** boxes.
+
+Tap it and talk. The icon turns your theme's accent colour and a halo tracks your voice, so you can see it's hearing you; Home Assistant's own voice-activity detection ends the recording when you stop speaking, so there's nothing to release. Tapping again while it's listening cancels and discards the audio. A dictated search runs immediately; a dictated AI prompt only fills the box, so a misheard phrase can't spend an AI call on its own. Trailing punctuation is stripped, since speech engines tend to end a phrase with a full stop.
+
+Recipe *editing* is deliberately left typing-only — this is for short, throwaway text, not for dictating a whole recipe.
+
+Like the AI features, this bundles no speech provider of its own. It runs Home Assistant's [Assist pipeline](https://www.home-assistant.io/voice_control/) with both the start and end stage set to speech-to-text, so **only** the speech stage executes — no conversation agent is invoked and no text-to-speech is produced. Audio streams over the page's existing authenticated Home Assistant connection; nothing is sent anywhere else.
+
+### Configuring it
+
+1. Make sure you have a working Assist pipeline with a speech-to-text engine (Settings → Voice assistants).
+2. Settings → Devices & Services → **Mealie Kitchen Display** → **Configure**.
+3. Turn on **Enable voice input (speech to text)**.
+4. Optionally pick an **Assist pipeline for voice input**. Leave it empty to use whichever pipeline Home Assistant has marked as preferred.
+
+Voice input is **off by default**, because it needs microphone permission on the device.
+
+### Things worth knowing
+
+- **Pick a general-purpose engine.** Whisper-based engines (e.g. the Faster Whisper add-on) and cloud engines transcribe free-form speech, which is what recipe names need. **Speech-to-Phrase only recognises pre-defined phrases** and will return nonsense for "chicken and chorizo paella" — don't choose a pipeline that uses it.
+- **Microphone access needs a secure context.** Over HTTPS (or `localhost`) browsers are fine. The Home Assistant companion app and kiosk browsers such as Fully Kiosk each need microphone permission granted to the app itself in your device's settings; without it the button reports that access was blocked.
+- The button hides itself entirely when voice input is switched off, when the page isn't a secure context, or when the device has no microphone — so you never get a mic button that can't work.
 
 ## Development
 

@@ -17,6 +17,8 @@ from .const import (
     CONF_AI_IMAGE_ENTITY,
     CONF_AI_TEXT_ENTITY,
     CONF_MEALIE_TOKEN,
+    CONF_VOICE_ENABLED,
+    CONF_VOICE_PIPELINE,
     DOMAIN,
 )
 
@@ -92,6 +94,27 @@ class MealieRecipePanelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 
+def _pipeline_options(hass: HomeAssistant) -> list[selector.SelectOptionDict]:
+    """Assist pipelines to choose from for speech input.
+
+    assist_pipeline ships with default_config but isn't guaranteed to be
+    loaded, so this degrades to an empty list rather than raising — the
+    speech option then just offers "preferred pipeline".
+    """
+    try:
+        from homeassistant.components import assist_pipeline
+    except ImportError:
+        return []
+    try:
+        pipelines = assist_pipeline.async_get_pipelines(hass)
+    except (KeyError, AttributeError):
+        return []
+    return [
+        selector.SelectOptionDict(value=pipeline.id, label=pipeline.name)
+        for pipeline in pipelines
+    ]
+
+
 class MealieRecipePanelOptionsFlow(config_entries.OptionsFlow):
     """Lets the user turn AI features on/off and pick which ai_task entities power them.
 
@@ -122,6 +145,23 @@ class MealieRecipePanelOptionsFlow(config_entries.OptionsFlow):
                     CONF_AI_IMAGE_ENTITY,
                     description={"suggested_value": current.get(CONF_AI_IMAGE_ENTITY)},
                 ): selector.EntitySelector(selector.EntitySelectorConfig(domain="ai_task")),
+                vol.Required(
+                    CONF_VOICE_ENABLED,
+                    default=current.get(CONF_VOICE_ENABLED, False),
+                ): selector.BooleanSelector(),
+                vol.Optional(
+                    CONF_VOICE_PIPELINE,
+                    description={"suggested_value": current.get(CONF_VOICE_PIPELINE)},
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=_pipeline_options(self.hass),
+                        # Leaving it empty means "preferred pipeline", and a
+                        # custom value keeps a previously-saved pipeline id
+                        # valid even if it's since been renamed/removed.
+                        custom_value=True,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

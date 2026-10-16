@@ -5,6 +5,7 @@ import type { HomeAssistant, MealPlanEntry, PanelConfig, PlanEntryType, RandomMo
 import { addDaysLocal, todayLocal } from "./date-utils";
 import "./components/confirm-dialog";
 import "./components/mealie-launcher-overlay";
+import "./components/voice-input-button";
 
 type CardMode = "mealplan" | "random" | "random-finder" | "ai-generate" | "search";
 
@@ -63,7 +64,12 @@ export class MealieDashboardCard extends LitElement {
   @state() private config: DashboardCardConfig = { type: "custom:mealie-dashboard-card", mode: "mealplan" };
   // Optimistic default, same reasoning as the panel: don't flash the AI
   // entry points away and back while the real answer is still loading.
-  @state() private panelConfig: PanelConfig = { aiEnabled: true, aiConfigured: true };
+  @state() private panelConfig: PanelConfig = {
+    aiEnabled: true,
+    aiConfigured: true,
+    voiceEnabled: false,
+    voicePipeline: null,
+  };
 
   @state() private loading = false;
   @state() private error = "";
@@ -78,6 +84,7 @@ export class MealieDashboardCard extends LitElement {
   @state() private pickedRecipe: RecipeSummary | null = null;
   @state() private pickerMode: RandomMode = "all";
   @state() private aiPrompt = "";
+  @state() private voiceState: "idle" | "listening" | "transcribing" = "idle";
   @state() private searchQuery = "";
   @state() private searchResults: RecipeSummary[] = [];
 
@@ -244,6 +251,37 @@ export class MealieDashboardCard extends LitElement {
     this.searchQuery = (e.target as HTMLInputElement).value;
     window.clearTimeout(this.searchTimer);
     this.searchTimer = window.setTimeout(() => this.runSearch(), 350);
+  }
+
+  // Dictated searches run straight away (no debounce — the user has
+  // finished speaking), matching how typing eventually behaves.
+  private onVoiceSearch(e: CustomEvent<{ text: string }>) {
+    this.searchQuery = e.detail.text;
+    window.clearTimeout(this.searchTimer);
+    this.runSearch();
+  }
+
+  private onVoiceError(e: CustomEvent<{ message: string }>) {
+    this.error = e.detail.message;
+  }
+
+  private voicePlaceholder(idle: string): string {
+    if (this.voiceState === "listening") return "Listening…";
+    if (this.voiceState === "transcribing") return "Transcribing…";
+    return idle;
+  }
+
+  private renderVoiceButton(label: string, onText: (e: CustomEvent<{ text: string }>) => void) {
+    if (!this.panelConfig.voiceEnabled) return nothing;
+    return html`<mealie-voice-button
+      .hass=${this.hass}
+      .pipelineId=${this.panelConfig.voicePipeline}
+      label=${label}
+      @voice-text=${onText}
+      @voice-error=${this.onVoiceError}
+      @voice-state=${(e: CustomEvent<{ state: "idle" | "listening" | "transcribing" }>) =>
+        (this.voiceState = e.detail.state)}
+    ></mealie-voice-button>`;
   }
 
   private async runSearch() {
@@ -646,6 +684,29 @@ export class MealieDashboardCard extends LitElement {
       min-height: 72px;
       resize: vertical;
     }
+    /* The mic sits inside the field; the padding keeps text clear of it. */
+    .voice-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+    }
+    .voice-wrap input[type="text"] {
+      padding-right: 46px;
+    }
+    .voice-wrap textarea {
+      padding-right: 46px;
+    }
+    .voice-wrap mealie-voice-button {
+      position: absolute;
+      right: 6px;
+    }
+    .voice-wrap.single mealie-voice-button {
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .voice-wrap.multiline mealie-voice-button {
+      top: 6px;
+    }
     .setup-needed {
       font-size: 14px;
       color: var(--secondary-text-color, #757575);
@@ -880,11 +941,19 @@ export class MealieDashboardCard extends LitElement {
       `;
     }
     return html`
-      <textarea
-        placeholder="e.g. a thick and crispy pizza dough recipe"
-        .value=${this.aiPrompt}
-        @input=${(e: Event) => (this.aiPrompt = (e.target as HTMLTextAreaElement).value)}
-      ></textarea>
+      <div class="voice-wrap multiline">
+        <textarea
+          placeholder=${this.voicePlaceholder("e.g. a thick and crispy pizza dough recipe")}
+          .value=${this.aiPrompt}
+          @input=${(e: Event) => (this.aiPrompt = (e.target as HTMLTextAreaElement).value)}
+        ></textarea>
+        ${this.renderVoiceButton(
+          "Dictate a recipe request",
+          // Fills the box only: generating opens the panel and starts an AI
+          // call, too costly to trigger on a possible mishearing.
+          (e) => (this.aiPrompt = e.detail.text)
+        )}
+      </div>
       <button
         class="primary"
         style="margin-top: 10px; width: 100%;"
@@ -901,12 +970,15 @@ export class MealieDashboardCard extends LitElement {
     const showAiCta = this.panelConfig.aiEnabled && query.length > 0;
     return html`
       <div class="search-row">
-        <input
-          type="text"
-          placeholder="Search recipes…"
-          .value=${this.searchQuery}
-          @input=${this.onSearchInput}
-        />
+        <div class="voice-wrap single">
+          <input
+            type="text"
+            placeholder=${this.voicePlaceholder("Search recipes…")}
+            .value=${this.searchQuery}
+            @input=${this.onSearchInput}
+          />
+          ${this.renderVoiceButton("Dictate a recipe search", this.onVoiceSearch)}
+        </div>
       </div>
       ${this.loading ? html`<p class="muted">Searching…</p>` : nothing}
       ${!this.loading && query && !this.searchResults.length

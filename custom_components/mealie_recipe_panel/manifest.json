@@ -1,12 +1,20 @@
 {
   "domain": "mealie_recipe_panel",
   "name": "Mealie Kitchen Display",
-  "codeowners": ["@nickclark7"],
+  "after_dependencies": [
+    "assist_pipeline"
+  ],
+  "codeowners": [
+    "@nickclark7"
+  ],
   "config_flow": true,
-  "dependencies": ["panel_custom", "http"],
+  "dependencies": [
+    "panel_custom",
+    "http"
+  ],
   "documentation": "https://github.com/nickclark7/mealie-kitchen-display",
   "issue_tracker": "https://github.com/nickclark7/mealie-kitchen-display/issues",
   "iot_class": "local_polling",
   "requirements": [],
-  "version": "0.14.0"
+  "version": "0.15.3"
 }

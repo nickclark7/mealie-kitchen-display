@@ -1,5 +1,23 @@
 export interface HomeAssistant {
   callApi<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, parameters?: unknown): Promise<T>;
+  // Home Assistant's authenticated WebSocket connection. Used for speech
+  // input (voice-input-button.ts), which streams microphone audio as binary
+  // frames on the same socket the subscription was made on.
+  connection: {
+    subscribeMessage<T>(callback: (message: T) => void, subscribeMessage: unknown): Promise<() => void>;
+    socket?: WebSocket;
+  };
+}
+
+// Events emitted by Home Assistant's assist_pipeline/run subscription. Only
+// the fields the speech-to-text stage actually uses are typed here.
+export interface PipelineRunEvent {
+  type: "run-start" | "stt-start" | "stt-vad-start" | "stt-vad-end" | "stt-end" | "run-end" | "error";
+  data?: {
+    runner_data?: { stt_binary_handler_id?: number | null };
+    stt_output?: { text?: string };
+    message?: string;
+  };
 }
 
 export interface RecipeCategory {
@@ -145,6 +163,13 @@ export interface PanelConfig {
   // stay visible even when this is false (to nudge setup) — they just show
   // a "needs configuring" message instead of the real generate/import UI.
   aiConfigured: boolean;
+  // Whether to offer speech input in the add-on's free-text boxes. False
+  // unless switched on in the integration's options (and assist_pipeline is
+  // actually available).
+  voiceEnabled: boolean;
+  // Assist pipeline to run speech through; null means Home Assistant's
+  // preferred pipeline.
+  voicePipeline: string | null;
 }
 
 export interface PaginatedResponse<T> {
