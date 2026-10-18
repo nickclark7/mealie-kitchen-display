@@ -72,7 +72,7 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
 - **A configurable dashboard card** with its own visual editor — meal plan, random recipes, a "surprise me" picker, the AI recipe generator, or recipe search, each launching straight into the full panel — see [Dashboard Card](#dashboard-card) below
 - **AI recipe finder**: generate a recipe from a text description, or import one from a photo and/or pasted text, using your own Home Assistant `ai_task.*` entities. Past AI recipes are kept automatically so you can save the keepers later — see [AI Recipe Finder](#ai-recipe-finder) below
 - **Voice input** (optional): a microphone button in the recipe search box, the AI prompt and the dashboard card, transcribing speech with a speech-to-text engine you've already configured in Home Assistant — see [Voice Input](#voice-input) below
-- **Ask a voice assistant for a recipe** (optional): say "show me a recipe for fried chicken" to a voice satellite with a screen, and the recipes open on that screen — see [Ask For A Recipe By Voice](#ask-for-a-recipe-by-voice) below
+- **Ask a voice assistant for a recipe** (optional): say "show me a recipe for fried chicken" and the recipes open on the device you asked from — a tablet, a browser, or the companion app on your phone — with requests from screenless satellites routed to a screen in the same room — see [Ask For A Recipe By Voice](#ask-for-a-recipe-by-voice) below
 - AI tasks can be disabled and removed form the interface for those who dont want that capability
 
 ## Installation
@@ -204,7 +204,7 @@ Voice input is **off by default**, because it needs microphone permission on the
 
 ## Ask For A Recipe By Voice
 
-With a voice satellite that also has a screen (a tablet running [kiosk-satellite](https://github.com/jxlarrea/kiosk-satellite) or the [voice satellite card](https://github.com/jxlarrea/voice-satellite-card-integration), the Home Assistant companion app, Fully Kiosk, or just a browser), you can ask for a recipe out loud and have it appear **on the screen you asked from**:
+Ask for a recipe out loud and it appears **on the device you asked from** — a tablet running [kiosk-satellite](https://github.com/jxlarrea/kiosk-satellite) or the [voice satellite card](https://github.com/jxlarrea/voice-satellite-card-integration), Fully Kiosk, a browser, or Assist inside the Home Assistant companion app on a phone or tablet:
 
 > "Show me a recipe for fried chicken"
 > "Show me my favourite pizza dough recipe"
@@ -229,13 +229,23 @@ Cookbook names are matched generously — exactly, then by containment ("taste" 
 
 1. Make sure the assistant your satellite uses has an LLM conversation agent with the **Assist** API enabled (Settings → Devices & Services → your AI integration → the conversation entry → *Control Home Assistant*). The built-in non-LLM agent can't call tools, so this feature needs an LLM-backed pipeline.
 2. Settings → Devices & Services → **Mealie Kitchen Display** → **Configure**.
-3. Under **Voice satellites that can show recipes on their screen**, pick the satellites you want this for. Leaving it empty switches the feature off entirely — the tool isn't even described to the assistant.
+3. Turn on **Let voice assistants show recipes on the asking device**. There's no per-device setup: asking a device and getting the answer back on it needs no permission list.
 
 ### Which screen it opens on
 
-The add-on fires an event; a small script it already loads on every Home Assistant page opens the panel. That's why it works the same in kiosk-satellite, the companion app, Fully Kiosk and a desktop browser.
+Recipes go to the device that asked, by whichever route suits it:
 
-A screen that runs the voice satellite identifies itself automatically, so a tablet like the above needs no setup. To make a different screen answer a particular satellite's requests, visit this once on that screen:
+| You asked from | What happens |
+|---|---|
+| A browser-based voice satellite (kiosk-satellite, the voice satellite card, Fully Kiosk, a desktop browser) | The results open as an overlay over whatever that screen was showing; closing them returns it to exactly where it was. |
+| Assist in the companion app, on the device you're holding | The app opens straight to the results (Android `command_webview`; it needs the app's "display over other apps" permission, which Android asks for the first time). |
+| Any other companion-app device | A notification arrives — "*pizza dough* — tap to open" — which opens the results. Works on Android and iOS. |
+| An assistant that can't show a web page — a speaker, or an ESPHome, Wyoming or VoIP satellite | A screen **in the same area** is used, so the lounge satellites answer on the lounge tablet and the kitchen ones on the kitchen tablet. The assistant says where it went. |
+| Nothing suitable in that room | The **fallback screen** from the options, if you've set one; otherwise the assistant says it has nowhere to show them. |
+
+Note that a satellite having a display isn't the same as it being able to show recipes: an ESPHome panel (an ESP32-P4 wall panel, say) draws its own interface and has no browser, so it's treated as screenless and routed by area.
+
+Browser screens running a voice satellite identify themselves automatically. To make a browser that *isn't* running one answer a particular satellite's requests, visit this once on that screen:
 
 ```
 /mealie-recipes?voice_screen=assist_satellite.kitchen_tablet
@@ -243,7 +253,7 @@ A screen that runs the voice satellite identifies itself automatically, so a tab
 
 Visiting `/mealie-recipes?voice_screen=` (empty) clears it again.
 
-Two things worth knowing: the request is fire-and-forget, so if the screen is off or isn't showing Home Assistant the assistant will still say it's showing recipes; and a screen in a background tab deliberately ignores requests so it can't swallow one meant for the tablet in front of you.
+Two things worth knowing: delivery is fire-and-forget, so if a screen is off or isn't showing Home Assistant the assistant will still say it's showing recipes; and a browser screen in a background tab deliberately ignores requests so it can't swallow one meant for the tablet in front of you.
 
 ## Development
 

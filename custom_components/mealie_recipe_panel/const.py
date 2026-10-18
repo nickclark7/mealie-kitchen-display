@@ -18,8 +18,19 @@ CONF_VOICE_ENABLED = "voice_enabled"
 # own preferred pipeline.
 CONF_VOICE_PIPELINE = "voice_pipeline"
 
-# Voice satellites allowed to show recipes on their own screen when asked
-# ("show me a recipe for fried chicken"). Empty/unset disables the feature.
+# Master switch for "show me a recipe for fried chicken": any device that asks
+# and has a screen gets the recipes back on itself, so no per-device setup is
+# needed — the request is inherently self-targeted.
+CONF_VOICE_DISPLAY_ENABLED = "voice_display_enabled"
+# Superseded by CONF_VOICE_DISPLAY_ENABLED. A non-empty list from an older
+# version counts as "enabled" so existing setups keep working untouched.
+CONF_VOICE_DISPLAY_DEVICES = "voice_display_devices"
+# Where to show recipes when the asking device has no screen of its own (an
+# ESPHome voice panel) or can't be identified (Assist in a desktop browser
+# sends no device id). Optional.
+CONF_VOICE_DISPLAY_FALLBACK = "voice_display_fallback"
+# Superseded by CONF_VOICE_DISPLAY_DEVICES, which holds device ids rather than
+# assist_satellite entity ids. Still read so existing setups keep working.
 CONF_VOICE_DISPLAY_SATELLITES = "voice_display_satellites"
 # Fired when a satellite asks for recipes to be shown; the frontend module
 # loaded on every HA page picks it up and opens the panel overlay.

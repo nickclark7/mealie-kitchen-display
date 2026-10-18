@@ -17,6 +17,9 @@ from .const import (
     CONF_AI_IMAGE_ENTITY,
     CONF_AI_TEXT_ENTITY,
     CONF_MEALIE_TOKEN,
+    CONF_VOICE_DISPLAY_DEVICES,
+    CONF_VOICE_DISPLAY_ENABLED,
+    CONF_VOICE_DISPLAY_FALLBACK,
     CONF_VOICE_DISPLAY_SATELLITES,
     CONF_VOICE_ENABLED,
     CONF_VOICE_PIPELINE,
@@ -95,25 +98,42 @@ class MealieRecipePanelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 
-def _pipeline_options(hass: HomeAssistant) -> list[selector.SelectOptionDict]:
+def _pipeline_options(
+    hass: HomeAssistant, current: str | None
+) -> list[selector.SelectOptionDict]:
     """Assist pipelines to choose from for speech input.
 
+    An empty value means "whichever pipeline Home Assistant prefers", offered
+    as a real option so it can be chosen again after a pipeline has been set.
+
     assist_pipeline ships with default_config but isn't guaranteed to be
-    loaded, so this degrades to an empty list rather than raising — the
-    speech option then just offers "preferred pipeline".
+    loaded, so a failure here degrades to just that option rather than
+    raising.
     """
+    options = [
+        selector.SelectOptionDict(value="", label="Use my preferred pipeline")
+    ]
     try:
         from homeassistant.components import assist_pipeline
-    except ImportError:
-        return []
-    try:
+
         pipelines = assist_pipeline.async_get_pipelines(hass)
-    except (KeyError, AttributeError):
-        return []
-    return [
+    except (ImportError, KeyError, AttributeError):
+        pipelines = []
+
+    options.extend(
         selector.SelectOptionDict(value=pipeline.id, label=pipeline.name)
         for pipeline in pipelines
-    ]
+    )
+    if current and not any(option["value"] == current for option in options):
+        # A pipeline that has since been deleted: keep it selectable so
+        # submitting the form doesn't fail validation on a value the user
+        # never touched, and make clear it's no longer there.
+        options.append(
+            selector.SelectOptionDict(
+                value=current, label=f"Pipeline no longer available ({current})"
+            )
+        )
+    return options
 
 
 class MealieRecipePanelOptionsFlow(config_entries.OptionsFlow):
@@ -155,24 +175,34 @@ class MealieRecipePanelOptionsFlow(config_entries.OptionsFlow):
                     description={"suggested_value": current.get(CONF_VOICE_PIPELINE)},
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=_pipeline_options(self.hass),
-                        # Leaving it empty means "preferred pipeline", and a
-                        # custom value keeps a previously-saved pipeline id
-                        # valid even if it's since been renamed/removed.
-                        custom_value=True,
+                        options=_pipeline_options(
+                            self.hass, current.get(CONF_VOICE_PIPELINE)
+                        ),
+                        # No custom_value: it makes the frontend render a
+                        # free-text picker that shows the raw pipeline id
+                        # instead of its name. A deleted pipeline is kept
+                        # valid by including it in the options above instead.
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
+                vol.Required(
+                    CONF_VOICE_DISPLAY_ENABLED,
+                    # Treated as already on for anyone who configured the
+                    # per-device lists this option replaced.
+                    default=current.get(
+                        CONF_VOICE_DISPLAY_ENABLED,
+                        bool(
+                            current.get(CONF_VOICE_DISPLAY_DEVICES)
+                            or current.get(CONF_VOICE_DISPLAY_SATELLITES)
+                        ),
+                    ),
+                ): selector.BooleanSelector(),
                 vol.Optional(
-                    CONF_VOICE_DISPLAY_SATELLITES,
+                    CONF_VOICE_DISPLAY_FALLBACK,
                     description={
-                        "suggested_value": current.get(CONF_VOICE_DISPLAY_SATELLITES)
+                        "suggested_value": current.get(CONF_VOICE_DISPLAY_FALLBACK)
                     },
-                ): selector.EntitySelector(
-                    selector.EntitySelectorConfig(
-                        domain="assist_satellite", multiple=True
-                    )
-                ),
+                ): selector.DeviceSelector(selector.DeviceSelectorConfig()),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

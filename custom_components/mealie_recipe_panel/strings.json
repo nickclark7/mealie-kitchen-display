@@ -21,15 +21,21 @@
   "options": {
     "step": {
       "init": {
-        "title": "AI Recipe Finder & voice input",
-        "description": "Turn AI recipe features on or off, and pick which AI Task entities power them. If AI is enabled but no text entity is chosen yet, the panel still shows the AI buttons and prompts the user to finish setup here.\n\nVoice input adds a microphone button to the AI prompt and the dashboard card's search box, transcribing speech with the speech-to-text engine of the Assist pipeline you choose. Leave the pipeline empty to use your preferred one, and pick a Whisper-based pipeline rather than Speech-to-Phrase, which only recognises pre-defined phrases.\n\nVoice satellites listed below can be asked to show recipes on their own screen (\"show me a recipe for fried chicken\"). This needs an assistant with the Assist LLM API enabled, and the screen must be showing Home Assistant.",
+        "title": "AI Recipe Finder, voice input & voice display",
+        "description": "Turn AI recipe features on or off, and pick which AI Task entities power them. If AI is enabled but no text entity is chosen yet, the panel still shows the AI buttons and prompts the user to finish setup here.\n\nVoice input adds a microphone button to the AI prompt and the dashboard card's search box, transcribing speech with the speech-to-text engine of the Assist pipeline you choose.\n\nVoice recipe display lets you ask any assistant for a recipe (\"show me a recipe for fried chicken\") and have it appear on the device you asked from. It needs an assistant whose conversation agent has the Assist LLM API enabled.",
         "data": {
           "ai_enabled": "Enable AI recipe features",
           "ai_text_entity": "AI Task entity for recipe text",
           "ai_image_entity": "AI Task entity for recipe images (optional)",
           "voice_enabled": "Enable voice input (speech to text)",
           "voice_pipeline": "Assist pipeline for voice input (optional)",
-          "voice_display_satellites": "Voice satellites that can show recipes on their screen"
+          "voice_display_enabled": "Let voice assistants show recipes on the asking device",
+          "voice_display_fallback": "Fallback screen for assistants that can't show recipes (optional)"
+        },
+        "data_description": {
+          "voice_pipeline": "Leave empty to use your preferred pipeline. Choose one with a general-purpose speech-to-text engine such as Whisper — Speech-to-Phrase only recognises pre-defined phrases and will mangle recipe names.",
+          "voice_display_enabled": "A browser-based voice satellite shows the recipes over its dashboard; a device running the companion app opens them in the app. No per-device setup is needed.",
+          "voice_display_fallback": "Used when the assistant you spoke to can't display a Home Assistant page: a speaker, or an ESPHome, Wyoming or VoIP voice satellite. This includes satellites that do have a display of their own, such as an ESP32-P4 panel — those screens show the panel's own interface, not a web page, so recipes can't be put on them. A screen in the same area as the assistant is used first, and this is the backstop when that room has no screen. Leave empty and those requests will say they have nowhere to show the recipes."
         }
       }
     }

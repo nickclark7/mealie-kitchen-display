@@ -29,12 +29,15 @@ from homeassistant.helpers import config_validation as cv, entity_registry as er
 
 from . import mealie_api
 from .const import (
+    CONF_VOICE_DISPLAY_DEVICES,
+    CONF_VOICE_DISPLAY_ENABLED,
+    CONF_VOICE_DISPLAY_FALLBACK,
     CONF_VOICE_DISPLAY_SATELLITES,
     DOMAIN,
-    EVENT_SHOW,
     FAVORITES_COOKBOOK_NAME,
     MY_RECIPES_COOKBOOK_NAME,
 )
+from .display import async_find_screen, async_find_screen_in_area, async_show
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -120,27 +123,39 @@ class ShowRecipeIntentHandler(intent.IntentHandler):
         query = slots["query"]["value"].strip()
         spoken_cookbook = (slots.get("cookbook", {}).get("value") or "").strip()
 
-        allowed: list[str] = list(
-            _entry_options(hass).get(CONF_VOICE_DISPLAY_SATELLITES) or []
-        )
-        if not allowed:
+        if not async_voice_display_enabled(hass):
             response.async_set_speech(
-                "Showing recipes on a screen isn't set up yet. Add this device's voice "
-                "satellite under the Mealie Kitchen Display integration's options."
+                "Showing recipes on a screen is switched off in the Mealie Kitchen "
+                "Display options."
             )
             return response
 
-        satellite = _satellite_for_device(hass, intent_obj.device_id)
-        if satellite is None or satellite not in allowed:
+        # Shown on the device that asked, whatever kind of device that is — a
+        # browser-based voice satellite or the companion app. No per-device
+        # setup: the request is self-targeted, so the only thing that matters
+        # is whether that device has a reachable screen. The nominated
+        # fallback covers devices with no screen (an ESPHome voice panel) and
+        # Assist in a desktop browser, which sends no device id at all.
+        asking_device = intent_obj.device_id
+        screen = async_find_screen(hass, asking_device) if asking_device else None
+        from_asking_device = bool(screen and screen.reachable)
+
+        if screen is None or not screen.reachable:
+            # A screen in the same room first (an ESPHome voice panel can hear
+            # the request but not show it), then the nominated device.
+            screen = async_find_screen_in_area(hass, asking_device)
+            if screen is None:
+                fallback = _entry_options(hass).get(CONF_VOICE_DISPLAY_FALLBACK)
+                screen = async_find_screen(hass, fallback) if fallback else None
+            from_asking_device = False
+
+        if screen is None or not screen.reachable:
             response.async_set_speech(
-                "This device isn't set up to show recipes on a screen."
+                "I can't show recipes on this device, and no other screen is set "
+                "up to show them instead."
             )
             _LOGGER.info(
-                "Refused show-recipe request: device %s resolved to satellite %s, "
-                "which is not in %s",
-                intent_obj.device_id,
-                satellite,
-                allowed,
+                "No screen for show-recipe request: asking device %s", asking_device
             )
             return response
 
@@ -172,16 +187,21 @@ class ShowRecipeIntentHandler(intent.IntentHandler):
             params["cookbook"] = cookbook["id"]
         path = f"?{urlencode(params)}"
 
-        hass.bus.async_fire(
-            EVENT_SHOW,
-            {"satellite": satellite, "device_id": intent_obj.device_id, "path": path},
+        shown = await async_show(
+            hass, screen, path, query=query, from_asking_device=from_asking_device
         )
-        # Fire and forget: nothing reports back whether a screen was actually
-        # listening, so this says what was sent rather than claiming it landed.
-        _LOGGER.info("Fired %s for %s: %s", EVENT_SHOW, satellite, path)
+        if not shown:
+            response.async_set_speech(
+                f"I couldn't show recipes on {screen.name}."
+            )
+            return response
 
+        # Where it went is only worth saying when it isn't the device being
+        # spoken to. Nothing reports back that a screen actually displayed it,
+        # so this describes what was sent rather than claiming it landed.
+        elsewhere = None if from_asking_device else screen.name
         response.async_set_speech(
-            _speech(query, cookbook["name"] if cookbook else None, unmatched)
+            _speech(query, cookbook["name"] if cookbook else None, unmatched, elsewhere)
         )
         return response
 
@@ -234,20 +254,25 @@ async def _resolve_cookbook(hass: HomeAssistant, spoken: str) -> dict | None:
     return None
 
 
-def _speech(query: str, cookbook: str | None, unmatched: str | None) -> str:
+def _speech(
+    query: str, cookbook: str | None, unmatched: str | None, elsewhere: str | None
+) -> str:
+    # Only named when the recipes went somewhere other than the device being
+    # spoken to, so the usual case stays short.
+    where = f" on {elsewhere}" if elsewhere else ""
     if cookbook == FAVORITES_COOKBOOK_NAME:
-        return f"Showing your favourite {query} recipes."
+        return f"Showing your favourite {query} recipes{where}."
     if cookbook == MY_RECIPES_COOKBOOK_NAME:
-        return f"Showing your own {query} recipes."
+        return f"Showing your own {query} recipes{where}."
     if cookbook:
-        return f"Showing {query} recipes from {cookbook}."
+        return f"Showing {query} recipes from {cookbook}{where}."
     if unmatched:
         # Searched everything rather than refusing, but say why.
         return (
             f"I couldn't find a cookbook called {unmatched}, "
-            f"so here are all the {query} recipes."
+            f"so here are all the {query} recipes{where}."
         )
-    return f"Showing recipes for {query}."
+    return f"Showing recipes for {query}{where}."
 
 
 @callback
@@ -257,19 +282,21 @@ def _entry_options(hass: HomeAssistant) -> dict:
 
 
 @callback
-def _satellite_for_device(hass: HomeAssistant, device_id: str | None) -> str | None:
-    """The assist_satellite entity belonging to the device that spoke.
+def async_voice_display_enabled(hass: HomeAssistant) -> bool:
+    """Whether voice requests may show recipes on the asking device.
 
-    A voice satellite's device is what Home Assistant passes as device_id for
-    an intent, so this is the link between "who asked" and "which screen".
+    Earlier versions enabled this by listing devices (or, before that,
+    satellites) allowed to ask. Those lists no longer gate anything — showing
+    a recipe on the device that asked for it needs no permission — but a
+    non-empty one still counts as "enabled" so nobody has to re-configure.
     """
-    if not device_id:
-        return None
-    registry = er.async_get(hass)
-    for entry in er.async_entries_for_device(registry, device_id, True):
-        if entry.domain == "assist_satellite":
-            return entry.entity_id
-    return None
+    options = _entry_options(hass)
+    if CONF_VOICE_DISPLAY_ENABLED in options:
+        return bool(options[CONF_VOICE_DISPLAY_ENABLED])
+    return bool(
+        options.get(CONF_VOICE_DISPLAY_DEVICES)
+        or options.get(CONF_VOICE_DISPLAY_SATELLITES)
+    )
 
 
 async def async_setup_intents(hass: HomeAssistant) -> None:
@@ -294,6 +321,3 @@ def async_register_intents(hass: HomeAssistant) -> None:
     intent.async_register(hass, ShowRecipeIntentHandler(hass))
 
 
-@callback
-def async_voice_display_enabled(hass: HomeAssistant) -> bool:
-    return bool(_entry_options(hass).get(CONF_VOICE_DISPLAY_SATELLITES))
