@@ -10,28 +10,28 @@ Everything beyond the basics is optional and uses the services you already have 
 
 All requests to Mealie are proxied server-side through Home Assistant, so it works regardless of whether Home Assistant or Mealie run on HTTP or HTTPS — the browser only ever talks to Home Assistant's own origin.
 <p align="center">
-  <a href="docs/images/01-recipe-grid.png?raw=1"><img src="docs/images/01-recipe-grid.png" width="860" alt="Recipe list"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/01-recipe-grid.png"><img src="docs/images/01-recipe-grid.png" width="860" alt="Recipe list"/></a>
 </p>
 
 <p align="center">
-  <a href="docs/images/02-cookbook-filter.png?raw=1"><img src="docs/images/02-cookbook-filter.png" width="205" alt="Cookbook filter"/></a>
-  <a href="docs/images/03-search-with-ai-suggestion.png?raw=1"><img src="docs/images/03-search-with-ai-suggestion.png" width="205" alt="Search with AI suggestion"/></a>
-  <a href="docs/images/04-recipe-detail.png?raw=1"><img src="docs/images/04-recipe-detail.png" width="205" alt="Recipe detail"/></a>
-  <a href="docs/images/05-cooking-mode.png?raw=1"><img src="docs/images/05-cooking-mode.png" width="205" alt="Cooking mode"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/02-cookbook-filter.png"><img src="docs/images/02-cookbook-filter.png" width="205" alt="Cookbook filter"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/03-search-with-ai-suggestion.png"><img src="docs/images/03-search-with-ai-suggestion.png" width="205" alt="Search with AI suggestion"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/04-recipe-detail.png"><img src="docs/images/04-recipe-detail.png" width="205" alt="Recipe detail"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/05-cooking-mode.png"><img src="docs/images/05-cooking-mode.png" width="205" alt="Cooking mode"/></a>
   <br/>
-  <a href="docs/images/06-recipe-editor.png?raw=1"><img src="docs/images/06-recipe-editor.png" width="205" alt="Recipe editor"/></a>
-  <a href="docs/images/07-ai-generate-prompt.png?raw=1"><img src="docs/images/07-ai-generate-prompt.png" width="205" alt="AI recipe prompt"/></a>
-  <a href="docs/images/08-ai-generated-recipe.png?raw=1"><img src="docs/images/08-ai-generated-recipe.png" width="205" alt="AI generated recipe"/></a>
-  <a href="docs/images/09-ai-import-from-photo.png?raw=1"><img src="docs/images/09-ai-import-from-photo.png" width="205" alt="Import a recipe from a photo"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/06-recipe-editor.png"><img src="docs/images/06-recipe-editor.png" width="205" alt="Recipe editor"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/07-ai-generate-prompt.png"><img src="docs/images/07-ai-generate-prompt.png" width="205" alt="AI recipe prompt"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/08-ai-generated-recipe.png"><img src="docs/images/08-ai-generated-recipe.png" width="205" alt="AI generated recipe"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/09-ai-import-from-photo.png"><img src="docs/images/09-ai-import-from-photo.png" width="205" alt="Import a recipe from a photo"/></a>
   <br/>
-  <a href="docs/images/10-ai-import-from-text.png?raw=1"><img src="docs/images/10-ai-import-from-text.png" width="205" alt="Import a recipe from text"/></a>
-  <a href="docs/images/11-ai-imported-recipe.png?raw=1"><img src="docs/images/11-ai-imported-recipe.png" width="205" alt="Imported recipe"/></a>
-  <a href="docs/images/12-meal-plan.png?raw=1"><img src="docs/images/12-meal-plan.png" width="205" alt="Meal plan"/></a>
-  <a href="docs/images/13-surprise-me.png?raw=1"><img src="docs/images/13-surprise-me.png" width="205" alt="Surprise me picker"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/10-ai-import-from-text.png"><img src="docs/images/10-ai-import-from-text.png" width="205" alt="Import a recipe from text"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/11-ai-imported-recipe.png"><img src="docs/images/11-ai-imported-recipe.png" width="205" alt="Imported recipe"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/12-meal-plan.png"><img src="docs/images/12-meal-plan.png" width="205" alt="Meal plan"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/13-surprise-me.png"><img src="docs/images/13-surprise-me.png" width="205" alt="Surprise me picker"/></a>
 </p>
 
 <p align="center">
-  <a href="docs/images/14-dashboard-cards.png?raw=1"><img src="docs/images/14-dashboard-cards.png" width="860" alt="Dashboard cards"/></a>
+  <a href="https://raw.githubusercontent.com/nickclark7/mealie-kitchen-display/main/docs/images/14-dashboard-cards.png"><img src="docs/images/14-dashboard-cards.png" width="860" alt="Dashboard cards"/></a>
 </p>
 
 ## Features
