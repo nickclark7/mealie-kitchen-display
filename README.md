@@ -1,8 +1,14 @@
 # Mealie Kitchen Display
 
-A touch-friendly Home Assistant sidebar panel for browsing, searching, and cooking from your [Mealie](https://mealie.io/) recipes — built for a kitchen tablet, includes a number of optional AI based features using your existing home assistant AI providers to generate, transcribe and optonally upload recipies to launchable from the sidebar or an included Lovelace card.
+A touch-friendly Home Assistant panel for browsing, searching and cooking from your [Mealie](https://mealie.io/) recipes, built for a kitchen tablet. Open it from the sidebar, from a launcher card, or from a configurable dashboard card.
 
-All requests to Mealie are proxied server-side through Home Assistant, so it works regardless of whether HA or Mealie run on HTTP or HTTPS — the browser only ever talks to HA's own origin.
+Everything beyond the basics is optional and uses the services you already have in Home Assistant rather than bundling its own:
+
+- **AI recipe finder** — describe a dish and have an LLM write the recipe, or photograph a cookbook page and have it transcribed, using your own `ai_task` entities. Generated recipes are kept so you can save the keepers to Mealie later.
+- **Voice input** — dictate into the search and AI prompt boxes with your own speech-to-text engine.
+- **Ask for a recipe out loud** — "show me a recipe for fried chicken" puts the results on the screen you asked from, whether that's a wall tablet, a browser or the companion app on your phone.
+
+All requests to Mealie are proxied server-side through Home Assistant, so it works regardless of whether Home Assistant or Mealie run on HTTP or HTTPS — the browser only ever talks to Home Assistant's own origin.
 <p align="center">
   <a href="https://github.com/user-attachments/assets/27e6a962-536b-4d59-bcd4-a875c359de9a">
     <img src="https://github.com/user-attachments/assets/27e6a962-536b-4d59-bcd4-a875c359de9a" width="180" alt="Screenshot 1"/>
