@@ -79,7 +79,7 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
 - **AI recipe finder**: generate a recipe from a text description, or import one from a photo and/or pasted text, using your own Home Assistant `ai_task.*` entities. Past AI recipes are kept automatically so you can save the keepers later — see [AI Recipe Finder](#ai-recipe-finder) below
 - **Voice input** (optional): a microphone button in the recipe search box, the AI prompt and the dashboard card, transcribing speech with a speech-to-text engine you've already configured in Home Assistant — see [Voice Input](#voice-input) below
 - **Ask a voice assistant for a recipe** (optional): say "show me a recipe for fried chicken" and the recipes open on the device you asked from — a tablet, a browser, or the companion app on your phone — with requests from screenless satellites routed to a screen in the same room — see [Ask For A Recipe By Voice](#ask-for-a-recipe-by-voice) below
-- AI tasks can be disabled and removed form the interface for those who dont want that capability
+- All AI features can be switched off and removed from the interface entirely, for anyone who doesn't want them
 
 ## Installation
 
