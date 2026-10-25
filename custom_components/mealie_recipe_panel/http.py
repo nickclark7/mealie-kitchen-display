@@ -1,17 +1,23 @@
 from __future__ import annotations
 
 import base64
+from datetime import timedelta
 import hashlib
 import logging
 import os
 import pathlib
 import random
+import re
+import time
+from typing import Any
 import uuid
 
 import aiohttp
 from aiohttp import web
 
 from homeassistant.components.http import HomeAssistantView
+from homeassistant.components.http.auth import async_sign_path
+from homeassistant.components.http.const import KEY_HASS_REFRESH_TOKEN_ID
 from homeassistant.const import CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -38,6 +44,19 @@ _LOGGER = logging.getLogger(__name__)
 _WWW_DIR = pathlib.Path(__file__).parent / "www"
 _IMPORT_MEDIA_SUBDIR = "mealie_recipe_panel"
 _ALLOWED_IMAGE_SIZES = {"tiny-original", "min-original", "original"}
+# Images are shown with plain <img> tags, which can't carry Home Assistant's
+# bearer token, so their URLs are signed instead (async_sign_path) and the
+# views themselves keep requiring authentication. Anything taken from a URL
+# and put into a request to Mealie is pattern-checked first: aiohttp decodes
+# %2F and %3F in a path parameter back into / and ?, so an unchecked id could
+# otherwise steer the proxied request at another Mealie endpoint entirely.
+_SIGNED_URL_TTL = timedelta(hours=24)
+# Re-sign once three quarters of the lifetime has gone, so a URL handed out
+# now is still valid for hours, and stays byte-identical in the meantime —
+# a changing signature would be a new URL every time and defeat caching.
+_SIGN_REUSE_FRACTION = 0.75
+_SIGNED_URL_CACHE_KEY = "signed_image_urls"
+_HISTORY_ID_RE = re.compile(r"\A[0-9a-f]{32}\Z")
 _VALID_ENTRY_TYPES = {"breakfast", "lunch", "dinner", "side", "snack", "drink", "dessert"}
 _RANDOM_MODES = {"all", "my-recipes", "favorites", "made-before"}
 FAVORITE_TAG_NAME = "Favorite"
@@ -68,6 +87,62 @@ class MealieProxyView(HomeAssistantView):
         if not entries:
             return {}
         return entries[0].options
+
+    def _sign(self, request: web.Request, path: str, *, reuse: bool = True) -> str:
+        """A signed URL for `path`, valid without an auth header.
+
+        Signatures are tied to the refresh token behind the current request,
+        so the cache is keyed by it as well as the path.
+        """
+        token_id = request.get(KEY_HASS_REFRESH_TOKEN_ID)
+        if not reuse:
+            return async_sign_path(self.hass, path, _SIGNED_URL_TTL)
+
+        cache = self.hass.data.setdefault(DOMAIN, {}).setdefault(
+            _SIGNED_URL_CACHE_KEY, {}
+        )
+        key = (token_id, path)
+        now = time.monotonic()
+        if (cached := cache.get(key)) and cached[1] > now:
+            return cached[0]
+        url = async_sign_path(self.hass, path, _SIGNED_URL_TTL)
+        cache[key] = (
+            url,
+            now + _SIGNED_URL_TTL.total_seconds() * _SIGN_REUSE_FRACTION,
+        )
+        return url
+
+    def _image_url(self, request: web.Request, recipe_id: str, size: str) -> str | None:
+        try:
+            uuid.UUID(str(recipe_id))
+        except (ValueError, AttributeError, TypeError):
+            return None
+        # The full-size hero is signed fresh every time, so replacing a photo
+        # shows up immediately; thumbnails reuse their signature, since a grid
+        # of them is what makes caching worth having.
+        return self._sign(
+            request,
+            f"{API_URL_BASE}/image/{recipe_id}/{size}",
+            reuse=size != "original",
+        )
+
+    def _with_image_urls(self, request: web.Request, recipe: Any) -> Any:
+        """Add signed image URLs to a recipe returned by Mealie."""
+        if not isinstance(recipe, dict) or not recipe.get("id"):
+            return recipe
+        if thumb := self._image_url(request, recipe["id"], "min-original"):
+            recipe["imageUrl"] = thumb
+        if large := self._image_url(request, recipe["id"], "original"):
+            recipe["imageUrlLarge"] = large
+        return recipe
+
+    def _with_image_urls_in_items(self, request: web.Request, data: Any, key: str | None = None) -> Any:
+        """Same, for a paginated response — optionally a nested recipe."""
+        if isinstance(data, dict):
+            for item in data.get("items") or []:
+                target = item.get(key) if key and isinstance(item, dict) else item
+                self._with_image_urls(request, target)
+        return data
 
     def _require_ai_enabled(self) -> None:
         # Defense-in-depth: the frontend already hides every AI entry point
@@ -299,7 +374,7 @@ class MealieRecipesView(MealieProxyView):
         if tags:
             params["tags"] = tags
         data = await self._mealie_get("/api/recipes", params=params)
-        return web.json_response(data)
+        return web.json_response(self._with_image_urls_in_items(request, data))
 
 
 class MealieRecipeDetailView(MealieProxyView):
@@ -308,7 +383,7 @@ class MealieRecipeDetailView(MealieProxyView):
 
     async def get(self, request: web.Request, slug: str) -> web.Response:
         data = await self._mealie_get(f"/api/recipes/{slug}")
-        return web.json_response(data)
+        return web.json_response(self._with_image_urls(request, data))
 
     async def delete(self, request: web.Request, slug: str) -> web.Response:
         await self._mealie_write("DELETE", f"/api/recipes/{slug}")
@@ -338,7 +413,9 @@ class MealieRecipeDetailView(MealieProxyView):
         current["recipeInstructions"] = body.get("recipeInstructions", [])
 
         updated = await self._mealie_write("PATCH", f"/api/recipes/{slug}", json_body=current)
-        return web.json_response(updated if isinstance(updated, dict) else {})
+        return web.json_response(
+            self._with_image_urls(request, updated) if isinstance(updated, dict) else {}
+        )
 
 
 class MealieRandomRecipeView(MealieProxyView):
@@ -368,7 +445,7 @@ class MealieRandomRecipeView(MealieProxyView):
             data = await self._mealie_get("/api/recipes", params={"perPage": "500"})
             candidates = [r for r in data["items"] if r.get("lastMade")]
             random.shuffle(candidates)
-            recipes = candidates[:count]
+            recipes = [self._with_image_urls(request, r) for r in candidates[:count]]
             if count_param is None:
                 return web.json_response({"recipe": recipes[0] if recipes else None})
             return web.json_response({"recipes": recipes})
@@ -382,10 +459,10 @@ class MealieRandomRecipeView(MealieProxyView):
             params["cookbook"] = cookbook_id
 
         data = await self._mealie_get("/api/recipes", params=params)
+        items = [self._with_image_urls(request, r) for r in data["items"]]
         if count_param is None:
-            recipe = data["items"][0] if data["items"] else None
-            return web.json_response({"recipe": recipe})
-        return web.json_response({"recipes": data["items"]})
+            return web.json_response({"recipe": items[0] if items else None})
+        return web.json_response({"recipes": items})
 
 
 class MealieFavoriteView(MealieProxyView):
@@ -799,6 +876,11 @@ class MealieAiHistoryView(MealieProxyView):
                 "prompt": e["prompt"],
                 "recipe": e["recipe"],
                 "hasImage": bool(e.get("imageFile")),
+                "imageUrl": self._sign(
+                    request, f"{API_URL_BASE}/ai/history/{e['id']}/image"
+                )
+                if e.get("imageFile")
+                else None,
             }
             for e in get_history(self.hass).list()
         ]
@@ -817,14 +899,16 @@ class MealieAiHistoryEntryView(MealieProxyView):
 
 
 class MealieAiHistoryImageView(MealieProxyView):
-    # Plain <img src> can't carry HA's bearer token — same reasoning as
-    # MealieImageView. Entry ids are random uuids, and an entry's photo never
-    # changes once written (a new photo gets a fresh ?v= from the frontend).
-    requires_auth = False
+    # Authenticated, and reached through a signed URL like the recipe
+    # images. An unguessable id is not access control: these ids travel in
+    # browser history, caches and logs.
     url = f"{API_URL_BASE}/ai/history/{{entry_id}}/image"
     name = f"api:{DOMAIN}:ai_history_image"
 
     async def get(self, request: web.Request, entry_id: str) -> web.Response:
+        self._require_ai_enabled()
+        if not _HISTORY_ID_RE.match(entry_id):
+            raise web.HTTPBadRequest(reason="Invalid history id")
         stored = await get_history(self.hass).read_image(entry_id)
         if stored is None:
             raise web.HTTPNotFound()
@@ -900,7 +984,7 @@ class MealieMealplanView(MealieProxyView):
             "/api/households/mealplans",
             params={"start_date": start_date, "end_date": end_date, "perPage": "100"},
         )
-        return web.json_response(data)
+        return web.json_response(self._with_image_urls_in_items(request, data, "recipe"))
 
     async def post(self, request: web.Request) -> web.Response:
         body = await request.json()
@@ -969,12 +1053,9 @@ class MealieCookbooksView(MealieProxyView):
 
 
 class MealieImageView(MealieProxyView):
-    # Loaded directly via plain <img src> (browsers don't attach HA's bearer
-    # auth header to tag-based requests), and Mealie itself already serves
-    # these images unauthenticated, so this endpoint intentionally skips HA
-    # auth rather than requiring signed-URL plumbing for a low-sensitivity
-    # asset (recipe photos, keyed by unguessable UUIDs).
-    requires_auth = False
+    # Authenticated like every other view here. <img> tags can't send a
+    # bearer token, so the URLs handed to the frontend are signed instead
+    # (see _image_url) and Home Assistant's auth middleware accepts those.
     url = f"{API_URL_BASE}/image/{{recipe_id}}/{{size}}"
     name = f"api:{DOMAIN}:image"
 
@@ -989,6 +1070,13 @@ class MealieImageView(MealieProxyView):
     async def get(self, request: web.Request, recipe_id: str, size: str) -> web.Response:
         if size not in _ALLOWED_IMAGE_SIZES:
             raise web.HTTPBadRequest(reason="Invalid image size")
+        # recipe_id goes straight into the upstream path, and aiohttp has
+        # already decoded any %2F or %3F inside it, so it has to be a plain
+        # UUID and nothing else.
+        try:
+            uuid.UUID(recipe_id)
+        except ValueError as err:
+            raise web.HTTPBadRequest(reason="Invalid recipe id") from err
         body, content_type = await self._mealie_get(
             f"/api/media/recipes/{recipe_id}/images/{size}.webp", binary=True
         )

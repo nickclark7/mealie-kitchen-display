@@ -45,11 +45,16 @@ export interface RecipeTool {
   slug: string;
 }
 
+// imageUrl/imageUrlLarge are signed by the integration and arrive with the
+// recipe: the image views require authentication, and an <img> tag cannot
+// send a bearer token, so these URLs carry a signature instead.
 export interface RecipeSummary {
   id: string;
   name: string;
   slug: string;
   image: string | null;
+  imageUrl?: string | null;
+  imageUrlLarge?: string | null;
   description: string;
   recipeServings: number;
   totalTime: string | null;
@@ -139,6 +144,7 @@ export interface GeneratedRecipe {
 // it's promoted to My Recipes.
 export interface AiHistoryEntry {
   id: string;
+  imageUrl: string | null;
   createdAt: string;
   source: "generate" | "import";
   prompt: string;

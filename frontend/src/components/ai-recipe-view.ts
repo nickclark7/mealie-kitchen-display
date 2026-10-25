@@ -26,7 +26,6 @@ export class AiRecipeView extends LitElement {
   @property({ attribute: false }) voicePipeline: string | null = null;
   @property({ attribute: false }) history: AiHistoryEntry[] = [];
   @property({ type: Boolean }) historyLoading = false;
-  @property({ attribute: false }) historyImageUrl: (entry: AiHistoryEntry) => string = () => "";
 
   @state() private tab: "generate" | "import" | "history" = "generate";
   @state() private voiceState: "idle" | "listening" | "transcribing" = "idle";
@@ -391,7 +390,7 @@ export class AiRecipeView extends LitElement {
                 @click=${() => this.dispatchEvent(new CustomEvent("history-open", { detail: { entry } }))}
               >
                 ${entry.hasImage
-                  ? html`<img class="history-thumb" src=${this.historyImageUrl(entry)} alt="" loading="lazy" />`
+                  ? html`<img class="history-thumb" src=${entry.imageUrl ?? ""} alt="" loading="lazy" />`
                   : html`<div class="history-thumb">${entry.source === "import" ? "📷" : "✨"}</div>`}
                 <div class="history-text">
                   <div class="history-name">${entry.recipe.name || "Untitled recipe"}</div>

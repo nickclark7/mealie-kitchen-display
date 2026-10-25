@@ -357,8 +357,9 @@ export class MealieDashboardCard extends LitElement {
     this.navigate(`${this.config.panel_path}?search=${encodeURIComponent(q)}`);
   }
 
+  // Signed by the integration and delivered with the recipe.
   private imageUrl(recipe: RecipeSummary): string {
-    return this.client!.recipeImageUrl(recipe.id);
+    return recipe.imageUrl ?? "";
   }
 
   static styles = css`

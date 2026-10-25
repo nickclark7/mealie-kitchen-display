@@ -17,5 +17,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/nickclark7/mealie-kitchen-display/issues",
   "requirements": [],
-  "version": "0.20.4"
+  "version": "0.21.0"
 }

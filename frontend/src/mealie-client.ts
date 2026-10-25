@@ -73,10 +73,6 @@ export class MealieClient {
     return this.hass.callApi("GET", `mealie_recipe_panel/tags`);
   }
 
-  recipeImageUrl(recipeId: string, size: "min-original" | "original" | "tiny-original" = "min-original"): string {
-    return `/api/mealie_recipe_panel/image/${recipeId}/${size}`;
-  }
-
   async setFavorite(slug: string, favorite: boolean): Promise<{ favorite: boolean }> {
     return this.hass.callApi("PUT", `mealie_recipe_panel/recipes/${slug}/favorite`, { favorite });
   }
@@ -178,10 +174,6 @@ export class MealieClient {
 
   async deleteAiHistoryEntry(id: string): Promise<unknown> {
     return this.hass.callApi("DELETE", `mealie_recipe_panel/ai/history/${id}`);
-  }
-
-  aiHistoryImageUrl(id: string): string {
-    return `/api/mealie_recipe_panel/ai/history/${id}/image`;
   }
 
   async importRecipe(text: string, image: File | null): Promise<GeneratedRecipeResult> {

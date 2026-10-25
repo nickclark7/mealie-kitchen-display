@@ -52,10 +52,6 @@ export class MealieRecipePanel extends LitElement {
   @state() private editingRecipe = false;
   @state() private recipeSaving = false;
   @state() private recipeImageGenerating = false;
-  // Bumped after a manual image regeneration so the <img src> query string
-  // changes — the image URL is otherwise identical (keyed only by recipe id
-  // + size), so the browser would keep showing the old cached photo.
-  @state() private recipeImageCacheBust = 0;
   @state() private searchQuery = "";
   @state() private cookbooks: Cookbook[] = [];
   // Optimistic defaults: assume AI is available until loadConfig() resolves,
@@ -299,7 +295,6 @@ export class MealieRecipePanel extends LitElement {
       if (this.selectedRecipe?.slug === slug) {
         this.selectedRecipe = await this.client.getRecipe(slug);
       }
-      this.recipeImageCacheBust = Date.now();
       this.loadRecipes(this.searchQuery);
     } catch (err) {
       this.error = await describeError(err, "Failed to generate an image");
@@ -557,7 +552,7 @@ export class MealieRecipePanel extends LitElement {
     this.aiImageError = null;
     this.aiImageLoading = false;
     this.aiImageRequest = null;
-    this.aiImageUrl = entry.hasImage ? this.client!.aiHistoryImageUrl(entry.id) : null;
+    this.aiImageUrl = entry.imageUrl;
     // So Regenerate reruns the same request this entry came from.
     this.aiLastAction = entry.source;
     if (entry.source === "import") {
@@ -776,9 +771,7 @@ export class MealieRecipePanel extends LitElement {
     }
 
     if (this.selectedRecipe && this.editingRecipe) {
-      const imageUrl =
-        this.client.recipeImageUrl(this.selectedRecipe.id, "original") +
-        (this.recipeImageCacheBust ? `?v=${this.recipeImageCacheBust}` : "");
+      const imageUrl = this.selectedRecipe.imageUrlLarge ?? "";
       return html`
         <panel-shell title="Edit Recipe" showBack @back=${() => (this.editingRecipe = false)}>
           <recipe-edit-view
@@ -795,9 +788,7 @@ export class MealieRecipePanel extends LitElement {
     }
 
     if (this.selectedRecipe) {
-      const imageUrl =
-        this.client.recipeImageUrl(this.selectedRecipe.id, "original") +
-        (this.recipeImageCacheBust ? `?v=${this.recipeImageCacheBust}` : "");
+      const imageUrl = this.selectedRecipe.imageUrlLarge ?? "";
       return html`
         <panel-shell title=${this.selectedRecipe.name} showBack @back=${() => this.closeDetail()}>
           <recipe-detail-view
@@ -943,7 +934,6 @@ export class MealieRecipePanel extends LitElement {
             @import=${(e: CustomEvent<{ text: string; image: File | null }>) => this.onAiImport(e)}
             .history=${this.aiHistory}
             .historyLoading=${this.aiHistoryLoading}
-            .historyImageUrl=${(entry: AiHistoryEntry) => this.client!.aiHistoryImageUrl(entry.id)}
             @history-open=${(e: CustomEvent<{ entry: AiHistoryEntry }>) => this.openAiHistoryEntry(e.detail.entry)}
             @history-delete=${(e: CustomEvent<{ entry: AiHistoryEntry }>) =>
               (this.pendingDeleteHistoryEntry = e.detail.entry)}
@@ -1023,7 +1013,7 @@ export class MealieRecipePanel extends LitElement {
           .loading=${this.loading}
           .searchQuery=${this.searchQuery}
           .aiEnabled=${this.panelConfig.aiEnabled}
-          .imageUrl=${(r: RecipeSummary) => this.client!.recipeImageUrl(r.id)}
+          .imageUrl=${(r: RecipeSummary) => r.imageUrl ?? ""}
           @recipe-select=${(e: CustomEvent<{ slug: string }>) => this.openRecipe(e.detail.slug)}
           @favorite-toggle=${this.onFavoriteToggle}
           @ai-generate-from-search=${(e: CustomEvent<{ query: string }>) => this.onAiGenerateFromSearch(e)}
