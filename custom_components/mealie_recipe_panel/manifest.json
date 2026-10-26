@@ -5,6 +5,9 @@
     "assist_pipeline",
     "llm"
   ],
+  "categories": [
+    "productivity_information.shopping_groceries"
+  ],
   "codeowners": [
     "@nickclark7"
   ],
@@ -17,5 +20,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/nickclark7/mealie-kitchen-display/issues",
   "requirements": [],
-  "version": "0.21.0"
+  "version": "0.21.1"
 }
