@@ -30,12 +30,16 @@
           "voice_enabled": "Enable voice input (speech to text)",
           "voice_pipeline": "Assist pipeline for voice input (optional)",
           "voice_display_enabled": "Let voice assistants show recipes on the asking device",
-          "voice_display_fallback": "Fallback screen for assistants that can't show recipes (optional)"
+          "voice_display_fallback": "Fallback screen for assistants that can't show recipes (optional)",
+          "url_import_preview": "Preview recipes imported from a link",
+          "url_import_ai_fallback": "Use AI when a page can't be read automatically"
         },
         "data_description": {
           "voice_pipeline": "Leave empty to use your preferred pipeline. Choose one with a general-purpose speech-to-text engine such as Whisper — Speech-to-Phrase only recognises pre-defined phrases and will mangle recipe names.",
           "voice_display_enabled": "A browser-based voice satellite shows the recipes over its dashboard; a device running the companion app opens them in the app. No per-device setup is needed.",
-          "voice_display_fallback": "Used when the assistant you spoke to can't display a Home Assistant page: a speaker, or an ESPHome, Wyoming or VoIP voice satellite. This includes satellites that do have a display of their own, such as an ESP32-P4 panel — those screens show the panel's own interface, not a web page, so recipes can't be put on them. A screen in the same area as the assistant is used first, and this is the backstop when that room has no screen. Leave empty and those requests will say they have nowhere to show the recipes."
+          "voice_display_fallback": "Used when the assistant you spoke to can't display a Home Assistant page: a speaker, or an ESPHome, Wyoming or VoIP voice satellite. This includes satellites that do have a display of their own, such as an ESP32-P4 panel — those screens show the panel's own interface, not a web page, so recipes can't be put on them. A screen in the same area as the assistant is used first, and this is the backstop when that room has no screen. Leave empty and those requests will say they have nowhere to show the recipes.",
+          "url_import_preview": "Off by default: a pasted link is scraped and saved by Mealie straight away, then opened, the same as importing a link in Mealie itself. Turn this on to check the recipe first and save it yourself.",
+          "url_import_ai_fallback": "Some sites can't be read by Mealie's scraper. With this on, Home Assistant fetches the page itself and asks your AI Task entity to read it, and the result is always shown for checking before it is saved. Off by default, because it means Home Assistant requesting the page rather than Mealie."
         }
       }
     }

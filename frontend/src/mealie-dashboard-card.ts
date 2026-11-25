@@ -69,6 +69,8 @@ export class MealieDashboardCard extends LitElement {
     aiConfigured: true,
     voiceEnabled: false,
     voicePipeline: null,
+    urlImportPreview: false,
+    urlImportAiFallback: false,
   };
 
   @state() private loading = false;

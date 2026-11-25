@@ -17,6 +17,8 @@ from .const import (
     CONF_AI_IMAGE_ENTITY,
     CONF_AI_TEXT_ENTITY,
     CONF_MEALIE_TOKEN,
+    CONF_URL_IMPORT_AI_FALLBACK,
+    CONF_URL_IMPORT_PREVIEW,
     CONF_VOICE_DISPLAY_DEVICES,
     CONF_VOICE_DISPLAY_ENABLED,
     CONF_VOICE_DISPLAY_FALLBACK,
@@ -203,6 +205,14 @@ class MealieRecipePanelOptionsFlow(config_entries.OptionsFlow):
                         "suggested_value": current.get(CONF_VOICE_DISPLAY_FALLBACK)
                     },
                 ): selector.DeviceSelector(selector.DeviceSelectorConfig()),
+                vol.Required(
+                    CONF_URL_IMPORT_PREVIEW,
+                    default=current.get(CONF_URL_IMPORT_PREVIEW, False),
+                ): selector.BooleanSelector(),
+                vol.Required(
+                    CONF_URL_IMPORT_AI_FALLBACK,
+                    default=current.get(CONF_URL_IMPORT_AI_FALLBACK, False),
+                ): selector.BooleanSelector(),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

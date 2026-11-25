@@ -17,6 +17,7 @@ import type {
   RecipeUpdateBody,
   ShoppingList,
   ShoppingListDetail,
+  UrlImportResult,
 } from "./types";
 
 // All calls go through the mealie_recipe_panel custom_component's HA-side
@@ -166,6 +167,17 @@ export class MealieClient {
       imageMime,
       historyId,
     });
+  }
+
+  // Mealie does the scraping; `preview` overrides the configured default.
+  async importFromUrl(url: string, preview?: boolean): Promise<UrlImportResult> {
+    return this.hass.callApi("POST", `mealie_recipe_panel/import-url`, { url, preview });
+  }
+
+  // Saves a previewed link import by letting Mealie import it properly, then
+  // merging any edits over the top.
+  async saveUrlImport(url: string, recipe: GeneratedRecipe): Promise<{ slug: string }> {
+    return this.hass.callApi("POST", `mealie_recipe_panel/import-url/save`, { url, recipe });
   }
 
   async getAiHistory(): Promise<{ items: AiHistoryEntry[] }> {

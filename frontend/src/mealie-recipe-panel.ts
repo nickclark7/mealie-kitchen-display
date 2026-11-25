@@ -30,6 +30,7 @@ import "./components/shopping-list-dialog";
 import "./components/mealplan-view";
 import "./components/random-picker-dialog";
 import "./components/confirm-dialog";
+import "./components/url-import-dialog";
 import "./components/shopping-view";
 import "./components/ai-recipe-view";
 import "./components/ai-recipe-preview";
@@ -61,6 +62,8 @@ export class MealieRecipePanel extends LitElement {
     aiConfigured: true,
     voiceEnabled: false,
     voicePipeline: null,
+    urlImportPreview: false,
+    urlImportAiFallback: false,
   };
   @state() private selectedCookbook = "";
   @state() private error = "";
@@ -108,6 +111,12 @@ export class MealieRecipePanel extends LitElement {
   @state() private aiHistoryLoading = false;
   @state() private aiHistoryId: string | null = null;
   @state() private aiImageUrl: string | null = null;
+  // Link import. aiSourceUrl is set while a previewed import is on screen,
+  // so Save routes back through Mealie's importer instead of the AI save.
+  @state() private showUrlImport = false;
+  @state() private urlImporting = false;
+  @state() private urlImportError = "";
+  @state() private aiSourceUrl: string | null = null;
   @state() private pendingDeleteHistoryEntry: AiHistoryEntry | null = null;
 
   private client?: MealieClient;
@@ -598,6 +607,7 @@ export class MealieRecipePanel extends LitElement {
     this.aiHistoryId = null;
     this.aiImageUrl = null;
     this.aiImageRequest = null;
+    this.aiSourceUrl = null;
   }
 
   private closeAiPreview() {
@@ -609,6 +619,7 @@ export class MealieRecipePanel extends LitElement {
     this.aiImageRequest = null;
     this.aiHistoryId = null;
     this.aiImageUrl = null;
+    this.aiSourceUrl = null;
     // The recipe just previewed is now in past recipes.
     this.loadAiHistory();
   }
@@ -723,8 +734,51 @@ export class MealieRecipePanel extends LitElement {
     }
   }
 
+  private openUrlImport() {
+    this.showUrlImport = true;
+    this.urlImportError = "";
+  }
+
+  private async onUrlImport(e: CustomEvent<{ url: string }>) {
+    if (!this.client) return;
+    this.urlImporting = true;
+    this.urlImportError = "";
+    try {
+      const result = await this.client.importFromUrl(e.detail.url);
+      this.showUrlImport = false;
+      if (result.slug) {
+        // Mealie scraped and saved it; go straight to the recipe.
+        this.loadRecipes(this.searchQuery);
+        this.openRecipe(result.slug);
+        return;
+      }
+      if (result.recipe) {
+        // Previewed, either because the option is on or because the AI
+        // fallback read the page — reuse the AI preview screen.
+        this.showAiView = true;
+        this.aiGeneratedRecipe = result.recipe;
+        this.aiSourceUrl = result.viaAi ? null : (result.sourceUrl ?? null);
+        this.aiHistoryId = null;
+        this.aiImageBase64 = null;
+        this.aiImageMime = null;
+        this.aiImageUrl = null;
+        this.aiImageError = null;
+        this.aiImageLoading = false;
+        this.aiImageRequest = null;
+      }
+    } catch (err) {
+      this.urlImportError = await describeError(err, "Failed to import from that link");
+    } finally {
+      this.urlImporting = false;
+    }
+  }
+
   private async onAiSaveRecipe(e: CustomEvent<{ recipe: GeneratedRecipe }>) {
     if (!this.client) return;
+    if (this.aiSourceUrl) {
+      await this.onSaveUrlImport(e.detail.recipe, this.aiSourceUrl);
+      return;
+    }
     // Grabbed before the save (and before closeAiView resets aiImageRequest
     // for the next recipe) — if the image is still generating, don't make
     // the user wait for it; save now and let it attach itself once ready.
@@ -746,6 +800,23 @@ export class MealieRecipePanel extends LitElement {
       this.openRecipe(slug);
     } catch (err) {
       this.aiError = await describeError(err, "Failed to save recipe to Mealie");
+    } finally {
+      this.aiSaving = false;
+    }
+  }
+
+  // Lets Mealie import the page properly (hero image, structured
+  // ingredients) and merges anything edited in the preview over the top.
+  private async onSaveUrlImport(recipe: GeneratedRecipe, sourceUrl: string) {
+    if (!this.client) return;
+    this.aiSaving = true;
+    try {
+      const { slug } = await this.client.saveUrlImport(sourceUrl, recipe);
+      this.closeAiView();
+      this.loadRecipes(this.searchQuery);
+      this.openRecipe(slug);
+    } catch (err) {
+      this.aiError = await describeError(err, "Failed to save that recipe");
     } finally {
       this.aiSaving = false;
     }
@@ -903,6 +974,7 @@ export class MealieRecipePanel extends LitElement {
               .imageError=${this.aiImageError}
               .imageLoading=${this.aiImageLoading}
               .saving=${this.aiSaving}
+              .canRegenerate=${!this.aiSourceUrl}
               @save=${(e: CustomEvent<{ recipe: GeneratedRecipe }>) => this.onAiSaveRecipe(e)}
               @regenerate=${() => this.onAiRegenerate()}
               @open-shopping-list=${this.onOpenShoppingList}
@@ -922,7 +994,7 @@ export class MealieRecipePanel extends LitElement {
           <ai-recipe-view
             .prompt=${this.aiPrompt}
             .generating=${this.aiGenerating}
-            .importing=${this.aiImporting}
+            .importing=${this.aiImporting || this.urlImporting}
             .error=${this.aiError}
             .aiConfigured=${this.panelConfig.aiConfigured}
             .hass=${this.hass}
@@ -932,6 +1004,7 @@ export class MealieRecipePanel extends LitElement {
             @prompt-change=${(e: CustomEvent<{ value: string }>) => (this.aiPrompt = e.detail.value)}
             @generate=${() => this.onAiGenerate()}
             @import=${(e: CustomEvent<{ text: string; image: File | null }>) => this.onAiImport(e)}
+            @url-import=${(e: CustomEvent<{ url: string }>) => this.onUrlImport(e)}
             .history=${this.aiHistory}
             .historyLoading=${this.aiHistoryLoading}
             @history-open=${(e: CustomEvent<{ entry: AiHistoryEntry }>) => this.openAiHistoryEntry(e.detail.entry)}
@@ -975,6 +1048,13 @@ export class MealieRecipePanel extends LitElement {
           >
             🛒
           </button>
+          <button
+            style="border:none;background:transparent;font-size:24px;padding:8px;min-width:44px;min-height:44px;cursor:pointer;"
+            aria-label="Import from a link"
+            @click=${() => this.openUrlImport()}
+          >
+            🔗
+          </button>
           ${this.panelConfig.aiEnabled
             ? html`
                 <button
@@ -987,6 +1067,13 @@ export class MealieRecipePanel extends LitElement {
               `
             : null}
         </span>
+        <url-import-dialog
+          .open=${this.showUrlImport}
+          .importing=${this.urlImporting}
+          .error=${this.urlImportError}
+          @url-import=${(e: CustomEvent<{ url: string }>) => this.onUrlImport(e)}
+          @url-import-cancel=${() => (this.showUrlImport = false)}
+        ></url-import-dialog>
         <random-picker-dialog
           .open=${this.showRandomPicker}
           @mode-select=${this.onRandomModeSelect}

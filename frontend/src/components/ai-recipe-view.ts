@@ -30,6 +30,7 @@ export class AiRecipeView extends LitElement {
   @state() private tab: "generate" | "import" | "history" = "generate";
   @state() private voiceState: "idle" | "listening" | "transcribing" = "idle";
   @state() private importText = "";
+  @state() private importUrl = "";
   @state() private importImage: File | null = null;
   @state() private importImagePreview: string | null = null;
 
@@ -150,6 +151,42 @@ export class AiRecipeView extends LitElement {
       color: #fff;
       font-size: 16px;
       cursor: pointer;
+    }
+    .url-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .url-row input {
+      flex: 1;
+      min-width: 0;
+      box-sizing: border-box;
+      font-size: 16px;
+      padding: 12px 14px;
+      min-height: 48px;
+      border-radius: 12px;
+      border: 1px solid var(--divider-color, #e0e0e0);
+      background: var(--card-background-color, #fff);
+      color: inherit;
+    }
+    .url-row input:focus {
+      outline: 2px solid var(--primary-color, #03a9f4);
+    }
+    .url-row button {
+      flex-shrink: 0;
+      min-height: 48px;
+      padding: 0 16px;
+      border-radius: 24px;
+      border: 1px solid var(--divider-color, #e0e0e0);
+      background: var(--card-background-color, #fff);
+      color: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .url-row button:disabled {
+      opacity: 0.6;
+      cursor: default;
     }
     .or-divider {
       text-align: center;
@@ -338,10 +375,30 @@ export class AiRecipeView extends LitElement {
     `;
   }
 
+  private onUrlImport() {
+    const url = this.importUrl.trim();
+    if (!url || this.importing) return;
+    this.dispatchEvent(new CustomEvent("url-import", { detail: { url } }));
+  }
+
   private renderImportTab() {
     const canImport = !this.importing && (!!this.importImage || !!this.importText.trim());
     return html`
-      <p class="intro">Snap or upload a photo of a recipe, paste in the text, or both.</p>
+      <p class="intro">Paste a link to a recipe page, or snap a photo of one, or paste the text.</p>
+      <div class="url-row">
+        <input
+          type="url"
+          inputmode="url"
+          placeholder="https://…"
+          .value=${this.importUrl}
+          @input=${(e: Event) => (this.importUrl = (e.target as HTMLInputElement).value)}
+          @keydown=${(e: KeyboardEvent) => e.key === "Enter" && this.onUrlImport()}
+        />
+        <button ?disabled=${this.importing || !this.importUrl.trim()} @click=${this.onUrlImport}>
+          🔗 Import
+        </button>
+      </div>
+      <p class="or-divider">— or —</p>
       ${this.importImagePreview
         ? html`
             <div class="photo-preview">

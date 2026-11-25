@@ -152,6 +152,15 @@ export interface AiHistoryEntry {
   hasImage: boolean;
 }
 
+export interface UrlImportResult {
+  // Set when Mealie scraped and saved it outright.
+  slug?: string;
+  // Set when it came back for checking first.
+  recipe?: GeneratedRecipe;
+  sourceUrl?: string;
+  viaAi?: boolean;
+}
+
 export interface GeneratedRecipeResult {
   recipe: GeneratedRecipe;
   historyId: string;
@@ -177,6 +186,10 @@ export interface PanelConfig {
   // Assist pipeline to run speech through; null means Home Assistant's
   // preferred pipeline.
   voicePipeline: string | null;
+  // Link import: save straight away (Mealie's own behaviour) unless the
+  // preview option is on. The AI fallback always previews regardless.
+  urlImportPreview: boolean;
+  urlImportAiFallback: boolean;
 }
 
 export interface PaginatedResponse<T> {

@@ -4,6 +4,7 @@ A touch-friendly Home Assistant panel for browsing, searching and cooking from y
 
 Everything beyond the basics is optional and uses the services you already have in Home Assistant rather than bundling its own:
 
+- **Import from a link** — paste a recipe page's address and Mealie scrapes it for you, image included.
 - **AI recipe finder** — describe a dish and have an LLM write the recipe, or photograph a cookbook page and have it transcribed, using your own `ai_task` entities. Generated recipes are kept so you can save the keepers to Mealie later.
 - **Voice input** — dictate into the search and AI prompt boxes with your own speech-to-text engine.
 - **Ask for a recipe out loud** — "show me a recipe for fried chicken" puts the results on the screen you asked from, whether that's a wall tablet, a browser or the companion app on your phone.
@@ -48,6 +49,7 @@ All requests to Mealie are proxied server-side through Home Assistant, so it wor
 - A matching Lovelace launcher card, so the panel can also be opened from any dashboard
 - **A configurable dashboard card** with its own visual editor — meal plan, random recipes, a "surprise me" picker, the AI recipe generator, or recipe search, each launching straight into the full panel — see [Dashboard Card](#dashboard-card) below
 - **AI recipe finder**: generate a recipe from a text description, or import one from a photo and/or pasted text, using your own Home Assistant `ai_task.*` entities. Past AI recipes are kept automatically so you can save the keepers later — see [AI Recipe Finder](#ai-recipe-finder) below
+- **Import a recipe from a link** — paste a recipe page's address and Mealie scrapes it, hero image and all, the same as importing a link in Mealie itself — see [Import From A Link](#import-from-a-link) below
 - **Voice input** (optional): a microphone button in the recipe search box, the AI prompt and the dashboard card, transcribing speech with a speech-to-text engine you've already configured in Home Assistant — see [Voice Input](#voice-input) below
 - **Ask a voice assistant for a recipe** (optional): say "show me a recipe for fried chicken" and the recipes open on the device you asked from — a tablet, a browser, or the companion app on your phone — with requests from screenless satellites routed to a screen in the same room — see [Ask For A Recipe By Voice](#ask-for-a-recipe-by-voice) below
 - All AI features can be switched off and removed from the interface entirely, for anyone who doesn't want them
@@ -108,12 +110,33 @@ Add **Mealie Recipe Card** (`custom:mealie-dashboard-card`) to any dashboard —
 
 Selecting a recipe from any mode (a meal-plan entry, a random tile, a search result) opens the full panel straight to that recipe. Every mode also accepts an **Overlay** option (opens full-screen on top of the current dashboard instead of navigating away — same as the [launcher card's](#launcher-card) overlay mode) and a **Panel path** option, only needed if the panel's been registered under a non-default URL.
 
+## Import From A Link
+
+Tap the 🔗 button on the recipe list, paste a recipe page's address, and it's imported — or use the link field at the top of the AI Recipe Finder's **Import** tab, which does the same thing.
+
+Mealie does the scraping: the page is fetched and parsed by your own Mealie server, exactly as it is when you paste a link into Mealie's own interface, so the hero image, times and servings all come across and the recipe keeps a link back to the original. Imported recipes are tagged **My Recipe** like anything else saved from here. This needs no AI and works whether or not the AI features are switched on.
+
+### Options
+
+Both live under Settings → Devices & Services → **Mealie Kitchen Display** → **Configure**.
+
+| Option | Default | What it does |
+|---|---|---|
+| **Preview recipes imported from a link** | Off | Off, a link is scraped and saved straight away and the recipe opens, like Mealie's own behaviour. On, you get the editable preview first and save it yourself. |
+| **Use AI when a page can't be read automatically** | Off | Off, an unreadable page says so and suggests the Import tab. On, Home Assistant fetches the page itself and asks your AI Task entity to read it — the result is always shown for checking first, whatever the preview setting says. |
+
+### Things worth knowing
+
+- **Not every site can be scraped.** Mealie uses [recipe_scrapers](https://github.com/hhursev/recipe-scrapers), which covers a lot of sites but not all — RecipeTinEats, for one, isn't readable at the time of writing. When that happens you'll be told, and the Import tab's photo and paste-text routes handle anything.
+- **Ingredients arrive as plain lines.** Mealie's separate ingredient parser (quantity/unit/food) isn't run by the importer; you can run it from Mealie if you want the structured form.
+- **Only public addresses are accepted.** Links are checked before anything fetches them, so a pasted address can't be used to reach something on your local network. The AI fallback is the only route where Home Assistant itself requests the page, which is why it's off by default.
+
 ## AI Recipe Finder
 
 Tap the ✨ button on the recipe list to open the AI Recipe Finder. It has three tabs:
 
 - **Generate** — describe what you want ("a thick and crispy pizza dough"), and an LLM writes a full recipe.
-- **Import** — take/upload a photo of a recipe (a cookbook page, a handwritten card, a screenshot) and/or paste in recipe text, and an LLM transcribes it into the same structured format.
+- **Import** — paste a link (see [Import From A Link](#import-from-a-link)), or take/upload a photo of a recipe (a cookbook page, a handwritten card, a screenshot) and/or paste in recipe text, and an LLM transcribes it into the same structured format.
 - **Past** — every recipe you've generated or imported, kept automatically (the last 20) so you can come back to one after cooking it. Past recipes are stored in Home Assistant, not Mealie, until you choose **Save to My Recipes**; you can also add one's ingredients to a shopping list without saving it.
 
 Either way you land on an editable preview — every field, including the name, can be changed, ingredients and instructions can be added/removed, and steps can be dragged into a new order — before you save it to My Recipes in Mealie. Optionally, a second AI model generates a photo for the recipe at the same time.

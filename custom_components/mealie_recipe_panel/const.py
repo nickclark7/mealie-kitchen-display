@@ -41,6 +41,12 @@ EVENT_SHOW = f"{DOMAIN}_show"
 FAVORITES_COOKBOOK_NAME = "Favorites"
 MY_RECIPES_COOKBOOK_NAME = "My Recipes"
 
+# Importing a recipe from a link. Mealie does the scraping, so the default
+# path adds no outbound fetching here; the AI fallback is the one route where
+# Home Assistant fetches the page itself, hence opt-in.
+CONF_URL_IMPORT_PREVIEW = "url_import_preview"
+CONF_URL_IMPORT_AI_FALLBACK = "url_import_ai_fallback"
+
 API_URL_BASE = f"/api/{DOMAIN}"
 STATIC_URL_BASE = f"/{DOMAIN}_static"
 PANEL_URL_PATH = "mealie-recipes"

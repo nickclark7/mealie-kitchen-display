@@ -14,6 +14,8 @@ export class AiRecipePreview extends LitElement {
   @property({ type: String }) imageError: string | null = null;
   @property({ type: Boolean }) imageLoading = false;
   @property({ type: Boolean }) saving = false;
+  // False for a link import: there is nothing to regenerate.
+  @property({ type: Boolean }) canRegenerate = true;
 
   // The parent hands us a freshly-generated recipe as a preview; we keep our
   // own editable copy so typing doesn't have to round-trip through parent
@@ -408,9 +410,11 @@ export class AiRecipePreview extends LitElement {
         <button class="pill-button" ?disabled=${!recipe.ingredients.some((i) => i.trim())} @click=${this.onAddToShoppingList}>
           🛒 Add to shopping list
         </button>
-        <button class="pill-button" ?disabled=${this.saving} @click=${() => this.dispatchEvent(new CustomEvent("regenerate"))}>
-          🔄 Regenerate
-        </button>
+        ${this.canRegenerate
+          ? html`<button class="pill-button" ?disabled=${this.saving} @click=${() => this.dispatchEvent(new CustomEvent("regenerate"))}>
+              🔄 Regenerate
+            </button>`
+          : nothing}
       </div>
 
       <label class="field-label">Recipe name</label>

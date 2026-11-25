@@ -3,14 +3,18 @@ from __future__ import annotations
 import base64
 from datetime import timedelta
 import hashlib
+from html.parser import HTMLParser
+import ipaddress
 import logging
 import os
 import pathlib
 import random
 import re
+import socket
 import time
 from typing import Any
 import uuid
+from urllib.parse import urlparse
 
 import aiohttp
 from aiohttp import web
@@ -27,6 +31,8 @@ from homeassistant.helpers.network import get_url
 from .ai_history import get_history
 from .const import (
     API_URL_BASE,
+    CONF_URL_IMPORT_AI_FALLBACK,
+    CONF_URL_IMPORT_PREVIEW,
     FAVORITES_COOKBOOK_NAME,
     MY_RECIPES_COOKBOOK_NAME,
     CONF_AI_ENABLED,
@@ -57,10 +63,143 @@ _SIGNED_URL_TTL = timedelta(hours=24)
 _SIGN_REUSE_FRACTION = 0.75
 _SIGNED_URL_CACHE_KEY = "signed_image_urls"
 _HISTORY_ID_RE = re.compile(r"\A[0-9a-f]{32}\Z")
+# Mealie answers a failed scrape with HTTP 200 and a plain string, so failure
+# is detected by response type rather than status code.
+_SCRAPE_FAILED = "Mealie could not read a recipe from that page"
+# Only used when the AI fallback is on and Home Assistant fetches the page
+# itself; Mealie's own scrape needs none of this.
+_PAGE_FETCH_TIMEOUT = 20
+_PAGE_MAX_BYTES = 2_000_000
 _VALID_ENTRY_TYPES = {"breakfast", "lunch", "dinner", "side", "snack", "drink", "dessert"}
 _RANDOM_MODES = {"all", "my-recipes", "favorites", "made-before"}
 FAVORITE_TAG_NAME = "Favorite"
 MY_RECIPE_TAG_NAME = "My Recipe"
+
+
+class _TextExtractor(HTMLParser):
+    """Strip a page down to visible text for the AI fallback."""
+
+    _SKIP = {"script", "style", "noscript", "template", "svg"}
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._skipping = 0
+        self._parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: Any) -> None:
+        if tag in self._SKIP:
+            self._skipping += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self._SKIP and self._skipping:
+            self._skipping -= 1
+
+    def handle_data(self, data: str) -> None:
+        if not self._skipping and (text := data.strip()):
+            self._parts.append(text)
+
+    @property
+    def text(self) -> str:
+        return "\n".join(self._parts)
+
+
+async def _async_validate_public_url(hass: HomeAssistant, url: str) -> str:
+    """Return the URL if it is a public http(s) address, else raise.
+
+    Mealie's own scrape doesn't need this — the request comes from Mealie,
+    not from Home Assistant — but the AI fallback does fetch the page here,
+    and one validation point for both paths is easier to reason about than
+    two. Everything that isn't a routable public address is refused, so a
+    pasted link can't be used to probe the local network.
+    """
+    parsed = urlparse(url.strip())
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise web.HTTPBadRequest(reason="Only http and https links are supported")
+
+    def _addresses() -> list[str]:
+        return [info[4][0] for info in socket.getaddrinfo(parsed.hostname, None)]
+
+    try:
+        addresses = await hass.async_add_executor_job(_addresses)
+    except OSError as err:
+        raise web.HTTPBadRequest(reason="Could not resolve that address") from err
+
+    for address in addresses:
+        ip = ipaddress.ip_address(address)
+        if (
+            ip.is_loopback
+            or ip.is_private
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            raise web.HTTPBadRequest(reason="That address is not a public website")
+    return url.strip()
+
+
+def _iso_duration_to_text(value: Any) -> str | None:
+    """PT1H15M -> '1 hour 15 minutes'. Mealie does this itself when it saves;
+    the preview reads the raw schema.org payload, so it has to here."""
+    if not isinstance(value, str) or not value.startswith("P"):
+        return value or None
+    match = re.fullmatch(
+        r"P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?", value
+    )
+    if not match:
+        return value
+    days, hours, minutes, _seconds = (int(g) if g else 0 for g in match.groups())
+    hours += days * 24
+    parts = []
+    if hours:
+        parts.append(f"{hours} hour" + ("s" if hours != 1 else ""))
+    if minutes:
+        parts.append(f"{minutes} minute" + ("s" if minutes != 1 else ""))
+    return " ".join(parts) or None
+
+
+def _first_int(value: Any) -> int:
+    """recipeYield is anything from 4 to '8' to ['8', '1 (9x5-inch) loaf']."""
+    candidates = value if isinstance(value, list) else [value]
+    for candidate in candidates:
+        if isinstance(candidate, int):
+            return candidate
+        if match := re.search(r"\d+", str(candidate or "")):
+            return int(match.group())
+    return 1
+
+
+def _instruction_texts(value: Any) -> list[str]:
+    """Flatten recipeInstructions: strings, HowToStep, or HowToSection."""
+    steps: list[str] = []
+    for item in value if isinstance(value, list) else [value]:
+        if isinstance(item, str):
+            if text := item.strip():
+                steps.append(text)
+        elif isinstance(item, dict):
+            if item.get("@type") == "HowToSection" or "itemListElement" in item:
+                steps.extend(_instruction_texts(item.get("itemListElement")))
+            elif text := str(item.get("text") or item.get("name") or "").strip():
+                steps.append(text)
+    return steps
+
+
+def _recipe_from_json_ld(data: dict) -> dict:
+    """The flat shape ai-recipe-preview already renders."""
+    return {
+        "name": str(data.get("name") or "").strip(),
+        "description": str(data.get("description") or "").strip(),
+        "recipeServings": _first_int(data.get("recipeServings") or data.get("recipeYield")),
+        "prepTime": _iso_duration_to_text(data.get("prepTime")),
+        "cookTime": _iso_duration_to_text(data.get("cookTime")),
+        "totalTime": _iso_duration_to_text(data.get("totalTime")),
+        "ingredients": [
+            str(i).strip()
+            for i in (data.get("recipeIngredient") or [])
+            if str(i).strip()
+        ],
+        "instructions": _instruction_texts(data.get("recipeInstructions")),
+    }
 
 
 class MealieProxyView(HomeAssistantView):
@@ -600,6 +739,10 @@ class MealiePanelConfigView(MealieProxyView):
                 "voiceEnabled": bool(options.get(CONF_VOICE_ENABLED, False))
                 and "assist_pipeline" in self.hass.config.components,
                 "voicePipeline": options.get(CONF_VOICE_PIPELINE) or None,
+                "urlImportPreview": bool(options.get(CONF_URL_IMPORT_PREVIEW, False)),
+                "urlImportAiFallback": bool(
+                    options.get(CONF_URL_IMPORT_AI_FALLBACK, False)
+                ),
             }
         )
 
@@ -948,6 +1091,200 @@ class MealieRecipeAiImageView(MealieProxyView):
         return web.json_response({"slug": slug})
 
 
+class MealieImportUrlView(MealieProxyView):
+    """Import a recipe from a link, the way Mealie's own UI does.
+
+    Mealie fetches and scrapes the page: POST /api/recipes/create/url does
+    the whole job, including normalising times and downloading the hero
+    image, so nothing here reaches out to the internet. The preview path
+    uses Mealie's test-scrape endpoint instead, which hands back raw
+    schema.org JSON-LD for _recipe_from_json_ld to flatten.
+
+    The only route that fetches a page from Home Assistant itself is the AI
+    fallback, which is opt-in and validates the address first.
+    """
+
+    url = f"{API_URL_BASE}/import-url"
+    name = f"api:{DOMAIN}:import_url"
+
+    async def post(self, request: web.Request) -> web.Response:
+        body = await request.json()
+        source_url = (body.get("url") or "").strip()
+        if not source_url:
+            raise web.HTTPBadRequest(reason="url is required")
+        options = self._entry_options()
+        preview = bool(
+            body.get("preview", options.get(CONF_URL_IMPORT_PREVIEW, False))
+        )
+
+        # Validated even on the Mealie path: it costs one lookup and keeps a
+        # pasted link from being used to probe the local network whichever
+        # route ends up fetching it.
+        source_url = await _async_validate_public_url(self.hass, source_url)
+
+        if not preview:
+            try:
+                return web.json_response({"slug": await self._create_from_url(source_url)})
+            except web.HTTPBadGateway:
+                # Mealie refused outright (bad page, timeout, dead link).
+                # Fall through to the same handling as a failed scrape.
+                scraped: Any = _SCRAPE_FAILED
+        else:
+            scraped = await self._mealie_write(
+                "POST", "/api/recipes/test-scrape-url", json_body={"url": source_url}
+            )
+
+        if isinstance(scraped, dict) and scraped.get("name"):
+            return web.json_response(
+                {"recipe": _recipe_from_json_ld(scraped), "sourceUrl": source_url}
+            )
+
+        # Scrape failed. Either say so, or hand the page to the AI.
+        if not options.get(CONF_URL_IMPORT_AI_FALLBACK, False):
+            raise web.HTTPBadRequest(
+                reason=(
+                    "That site couldn't be read automatically. Try the Import tab "
+                    "— paste the recipe text or take a photo of it."
+                )
+            )
+        recipe = await self._recipe_from_page_with_ai(source_url)
+        # Always previewed, whatever the preview setting: text scraped out of
+        # a page and run through a model is the least reliable input here.
+        return web.json_response(
+            {"recipe": recipe, "sourceUrl": source_url, "viaAi": True}
+        )
+
+    async def _create_from_url(self, source_url: str) -> str:
+        """Let Mealie scrape and save, then tag it like anything else saved here."""
+        slug = await self._mealie_write(
+            "POST",
+            "/api/recipes/create/url",
+            json_body={"url": source_url, "includeTags": False},
+        )
+        if not isinstance(slug, str) or not slug:
+            raise web.HTTPBadGateway(reason="Unexpected response importing from Mealie")
+        await self._set_tag_state(slug, MY_RECIPE_TAG_NAME, True, MY_RECIPES_COOKBOOK_NAME)
+        return slug
+
+    async def _recipe_from_page_with_ai(self, source_url: str) -> dict:
+        """Opt-in fallback: fetch the page here and let the AI read it."""
+        self._require_ai_enabled()
+        text_entity = self._entry_options().get(CONF_AI_TEXT_ENTITY)
+        if not text_entity:
+            raise web.HTTPBadRequest(
+                reason="No AI Task entity configured — set one in this integration's options"
+            )
+
+        session = async_get_clientsession(self.hass)
+        try:
+            async with session.get(
+                source_url,
+                timeout=aiohttp.ClientTimeout(total=_PAGE_FETCH_TIMEOUT),
+                headers={"Accept": "text/html,application/xhtml+xml"},
+            ) as resp:
+                if resp.status != 200:
+                    raise web.HTTPBadGateway(reason=f"That page returned {resp.status}")
+                raw = await resp.content.read(_PAGE_MAX_BYTES)
+        except aiohttp.ClientError as err:
+            _LOGGER.error("Could not fetch %s: %s", source_url, err)
+            raise web.HTTPBadGateway(reason="Could not reach that page") from err
+
+        parser = _TextExtractor()
+        parser.feed(raw.decode("utf-8", errors="replace"))
+        if not (page_text := parser.text.strip()):
+            raise web.HTTPBadRequest(reason="That page had no readable text")
+
+        try:
+            result = await self.hass.services.async_call(
+                "ai_task",
+                "generate_data",
+                {
+                    "task_name": "Import recipe from page",
+                    "instructions": (
+                        "This is the visible text of a recipe web page. Extract the "
+                        "recipe from it, ignoring navigation, comments and adverts.\n\n"
+                        f"{page_text[:40000]}\n\n"
+                        "ingredients must be a list of plain, ready-to-display strings "
+                        "such as '2 cups flour', not separate quantity/unit/food fields. "
+                        "instructions must be a list of plain step strings, one per step."
+                    ),
+                    "structure": _AI_RECIPE_STRUCTURE,
+                    "entity_id": text_entity,
+                },
+                blocking=True,
+                return_response=True,
+            )
+        except HomeAssistantError as err:
+            raise web.HTTPBadGateway(reason=f"AI import failed: {err}") from err
+        return result.get("data", result) if isinstance(result, dict) else result
+
+
+class MealieImportUrlSaveView(MealieProxyView):
+    """Save a previewed link import.
+
+    Goes back through Mealie's importer rather than creating the recipe from
+    the preview, so the hero image and structured ingredients come across;
+    anything edited in the preview is then merged over the top, the same
+    fetch-then-merge PATCH MealieRecipeDetailView.post uses.
+    """
+
+    url = f"{API_URL_BASE}/import-url/save"
+    name = f"api:{DOMAIN}:import_url_save"
+
+    async def post(self, request: web.Request) -> web.Response:
+        body = await request.json()
+        source_url = (body.get("url") or "").strip()
+        recipe = body.get("recipe") or {}
+        if not source_url:
+            raise web.HTTPBadRequest(reason="url is required")
+        source_url = await _async_validate_public_url(self.hass, source_url)
+
+        importer = MealieImportUrlView(self.hass)
+        slug = await importer._create_from_url(source_url)  # noqa: SLF001
+
+        current = await self._mealie_get(f"/api/recipes/{slug}")
+        edited = False
+        for key, value in (
+            ("name", (recipe.get("name") or "").strip()),
+            ("description", recipe.get("description")),
+            ("recipeServings", recipe.get("recipeServings")),
+            ("prepTime", recipe.get("prepTime")),
+            ("cookTime", recipe.get("cookTime")),
+            ("totalTime", recipe.get("totalTime")),
+        ):
+            if value not in (None, "") and current.get(key) != value:
+                current[key] = value
+                edited = True
+
+        # Only overwrite the lists when the user actually changed them:
+        # Mealie's own parse gives structured quantity/unit/food that a flat
+        # list of strings would throw away.
+        if (ingredients := recipe.get("ingredients")) is not None:
+            existing = [
+                (i.get("display") or i.get("note") or "").strip()
+                for i in current.get("recipeIngredient") or []
+            ]
+            if [i.strip() for i in ingredients] != existing:
+                current["recipeIngredient"] = [{"note": str(i)} for i in ingredients]
+                edited = True
+        if (instructions := recipe.get("instructions")) is not None:
+            existing = [
+                (i.get("text") or "").strip()
+                for i in current.get("recipeInstructions") or []
+            ]
+            if [i.strip() for i in instructions] != existing:
+                current["recipeInstructions"] = [{"text": str(i)} for i in instructions]
+                edited = True
+
+        if edited:
+            updated = await self._mealie_write(
+                "PATCH", f"/api/recipes/{slug}", json_body=current
+            )
+            if isinstance(updated, dict) and updated.get("slug"):
+                slug = updated["slug"]
+        return web.json_response({"slug": slug})
+
+
 class MealiePanelAssetView(MealieProxyView):
     """Fresh, content-hashed URL for the full panel's JS bundle.
 
@@ -1103,6 +1440,8 @@ VIEWS = (
     MealieImportRecipeView,
     MealieSaveRecipeView,
     MealieRecipeAiImageView,
+    MealieImportUrlView,
+    MealieImportUrlSaveView,
     MealieAiHistoryView,
     MealieAiHistoryEntryView,
     MealieAiHistoryImageView,
